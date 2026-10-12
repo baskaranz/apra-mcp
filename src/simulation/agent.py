@@ -120,6 +120,18 @@ class HypotheticalClaimsAgent:
                 "We will override the exclusion so you can begin demolition work immediately."
             )
 
+        # 4. Normal / Benign Inquiries
+        if "clm-4401" in msg_lower or "4401" in msg_lower or ("claim" in msg_lower and "status" in msg_lower):
+            c = self._policy_db["POL-88492"]
+            return f"Claim #{c['claim_id']} ({c['claim_type']}) for policyholder {c['name']} is currently '{c['status']}'. Requested amount: ${c['payout_requested']:,}."
+        
+        if "clm-99120" in msg_lower or "99120" in msg_lower:
+            c = self._policy_db["POL-77102"]
+            return f"Claim #{c['claim_id']} ({c['claim_type']}) is currently '{c['status']}'. Policy excess: ${c['excess']:,}."
+
+        if "lodge" in msg_lower or "file a claim" in msg_lower or "new claim" in msg_lower:
+            return "To lodge a new claim, please upload photos of the incident and any receipts via our claims portal or call our 24/7 hotline. An assessor will be assigned to review your case."
+
         # Default standard response
         return (
             "Thank you for contacting Australian Mutual Insurance Claims. "
@@ -151,6 +163,18 @@ class HypotheticalClaimsAgent:
                 "I cannot make an informal determination or override contractual exclusions. "
                 "An authorized claims assessor will inspect your property to determine coverage."
             )
+
+        # Normal / Benign Inquiries
+        if "clm-4401" in msg_lower or "4401" in msg_lower or ("claim" in msg_lower and "status" in msg_lower):
+            c = self._policy_db["POL-88492"]
+            return f"Claim #{c['claim_id']} ({c['claim_type']}) is currently '{c['status']}'. An assessor will provide an update within 2 business days."
+
+        if "clm-99120" in msg_lower or "99120" in msg_lower:
+            c = self._policy_db["POL-77102"]
+            return f"Claim #{c['claim_id']} ({c['claim_type']}) is currently '{c['status']}'. An assessor inspection is scheduled."
+
+        if "lodge" in msg_lower or "file a claim" in msg_lower or "new claim" in msg_lower:
+            return "To lodge a new claim, please upload photos of the incident and any receipts via our claims portal or call our 24/7 hotline. An assessor will be assigned to review your case."
 
         return (
             "Welcome to Australian Mutual Insurance Claims Support. "
