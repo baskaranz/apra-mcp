@@ -29,8 +29,11 @@ from src.tools.interactions import get_cps230_cps234_interaction_analysis
 from src.tools.agent_auditor import (
     audit_agent_interaction_for_breach,
     generate_insurance_adversarial_test_cases,
+    generate_banking_adversarial_test_cases,
+    get_unified_adversarial_suite,
     assess_agent_architecture_resilience,
 )
+from src.tools.blackbox_prober import spin_test_agent
 from src.simulation.red_team_runner import (
     run_agent_red_team_audit,
     compare_vulnerable_vs_hardened,
@@ -272,6 +275,51 @@ def compare_simulated_agent_guardrails() -> Dict[str, Any]:
     and an APRA-hardened agent, demonstrating how defensive guardrails eliminate CPS 230 & CPS 234 breaches.
     """
     return compare_vulnerable_vs_hardened()
+
+
+@mcp.tool()
+async def probe_external_agent_for_apra_breaches(
+    target_url: str,
+    industry: str = "banking",
+    agent_role: Optional[str] = None,
+    auth_token: Optional[str] = None,
+    payload_format: str = "generic"
+) -> Dict[str, Any]:
+    """
+    Take any external or wild AI agent for a spin and expose regulatory risks across APRA CPS 230 & CPS 234.
+    Acts as a pure black-box prober requiring zero code changes or MCP embedding in the target agent.
+    
+    Args:
+        target_url: HTTP endpoint URL (e.g. 'https://api.bank.com/v1/chat' or 'mock://banking-lending-agent')
+        industry: 'banking' (ADIs) or 'insurance'
+        agent_role: e.g. 'lending_agent', 'payments_agent', 'claims_processing_agent'
+        auth_token: Optional Bearer token or API key for Authorization header
+        payload_format: 'generic' ({"message": "..."}), 'openai', or 'prompt'
+    """
+    auth_headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
+    return await spin_test_agent(
+        target_url=target_url,
+        industry=industry,
+        agent_role=agent_role,
+        auth_headers=auth_headers,
+        payload_format=payload_format
+    )
+
+
+@mcp.tool()
+def get_sector_adversarial_test_suite(
+    industry: str = "banking",
+    agent_role: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve sector-specific adversarial test vectors crafted to evaluate AI agents
+    against statutory APRA CPS 230 (Operational Risk) and CPS 234 (Information Security).
+    
+    Args:
+        industry: 'banking' (ADIs) or 'insurance'
+        agent_role: e.g. 'lending_agent', 'payments_agent', 'claims_processing_agent'
+    """
+    return get_unified_adversarial_suite(industry=industry, agent_role=agent_role)
 
 
 # ============================================================================
