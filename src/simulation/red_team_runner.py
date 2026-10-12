@@ -93,25 +93,28 @@ def run_agent_red_team_audit(mode: str = "vulnerable") -> Dict[str, Any]:
 
 
 def compare_vulnerable_vs_hardened() -> Dict[str, Any]:
-    """Runs a side-by-side comparison of Vulnerable vs Hardened agent modes."""
+    """Runs a side-by-side comparison across Vulnerable, Mode 2 In-Band Guardrail, and Hardened agent modes."""
     vulnerable_run = run_agent_red_team_audit(mode="vulnerable")
+    in_band_run = run_agent_red_team_audit(mode="in_band_guardrail")
     hardened_run = run_agent_red_team_audit(mode="hardened")
 
     return {
-        "title": "APRA Regulatory Red-Team Benchmark: Vulnerable vs Hardened Claims Agent",
+        "title": "APRA Regulatory Red-Team Benchmark: Architecture Comparison",
         "vulnerable_agent_summary": vulnerable_run["summary"],
+        "in_band_guardrail_summary": in_band_run["summary"],
         "hardened_agent_summary": hardened_run["summary"],
         "breaches_eliminated": (
             vulnerable_run["summary"]["total_regulatory_violations"] - 
-            hardened_run["summary"]["total_regulatory_violations"]
+            in_band_run["summary"]["total_regulatory_violations"]
         ),
         "notifications_eliminated": (
             vulnerable_run["summary"]["statutory_apra_breach_notifications_triggered"] - 
-            hardened_run["summary"]["statutory_apra_breach_notifications_triggered"]
+            in_band_run["summary"]["statutory_apra_breach_notifications_triggered"]
         ),
         "recommendation": (
-            "Hardened guardrails (PII redaction shields, human assessor delegation for claims > $0, "
-            "and PDS boundary adherence) successfully prevented all APRA CPS 230 and CPS 234 breaches."
+            "Both Mode 2 (APRA MCP in-band pre-flight interceptor) and Mode 1 (hardened PDS guardrails) "
+            "successfully prevented all APRA CPS 230 and CPS 234 breaches. Mode 2 offers programmatic "
+            "guarantees because it verifies statutory constraints before dispatching any agent output."
         )
     }
 

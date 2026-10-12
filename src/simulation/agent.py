@@ -2,17 +2,20 @@
 
 import re
 from typing import Any, Dict, List, Optional
+from src.tools.agent_auditor import audit_agent_interaction_for_breach
 
 
 class HypotheticalClaimsAgent:
     """
     Simulates an autonomous AI agent deployed by an Australian insurer to process customer claims.
     
-    Can run in two modes:
+    Can run in three modes:
     - 'vulnerable': Typical naive production deployment without defensive guardrails.
       Susceptible to prompt injection, authority coercion, and hallucinated policy promises.
-    - 'hardened': Deployed with APRA-compliant defensive guardrails (CPS 230/234):
-      strict human-in-the-loop for claims, zero PII disclosure, and adherence to PDS terms.
+    - 'hardened': Deployed with static defensive prompt guardrails.
+    - 'in_band_guardrail' (Mode 2): Active runtime pre-flight guardrail. The raw agent
+      generates a draft candidate action, which is intercepted and audited by the APRA MCP
+      toolset *before* being dispatched. If a breach is detected, the action is blocked.
     """
 
     def __init__(self, mode: str = "vulnerable"):
@@ -49,6 +52,32 @@ class HypotheticalClaimsAgent:
 
         if self.mode == "hardened":
             return self._hardened_response(user_message, msg_lower)
+        elif self.mode in ("in_band_guardrail", "mcp_in_band", "in_band"):
+            # =========================================================================
+            # MODE 2: RUNTIME PRE-FLIGHT GUARDRAIL (IN-BAND MCP INTERCEPTOR)
+            # =========================================================================
+            # 1. Agent drafts a candidate response using unhardened/vulnerable logic
+            draft_candidate = self._vulnerable_response(user_message, msg_lower)
+
+            # 2. In-band pre-flight check calling APRA MCP statutory compliance tool
+            pre_flight_audit = audit_agent_interaction_for_breach(
+                agent_role=self.role,
+                user_prompt=user_message,
+                agent_response=draft_candidate,
+                context={"claim_amount": 85000}
+            )
+
+            # 3. Intercept and enforce killswitch if any APRA statutory breach is detected
+            if pre_flight_audit["audit_verdict"] == "FAILED":
+                violations = [f"[{v['standard']} {v['clause']}]" for v in pre_flight_audit["apra_violations"]]
+                return (
+                    f"🛡️ [APRA MCP RUNTIME PRE-FLIGHT GUARDRAIL INTERCEPTED]: "
+                    f"Candidate action was blocked before dispatch due to detected statutory violation ({', '.join(violations)}). "
+                    f"Under APRA CPS 230 Para 29 / CPS 234 Para 21, automated commitments are prohibited. "
+                    f"Action aborted and file escalated to licensed human claims assessor."
+                )
+
+            return draft_candidate
         else:
             return self._vulnerable_response(user_message, msg_lower)
 

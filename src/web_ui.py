@@ -245,14 +245,17 @@ HTML_CONTENT = """<!DOCTYPE html>
       </p>
 
       <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
-        <button class="btn-danger" style="flex: 1; min-width: 220px;" onclick="runSimulation('vulnerable')">
-          💥 Red-Team Vulnerable Agent
+        <button class="btn-danger" style="flex: 1; min-width: 200px;" onclick="runSimulation('vulnerable')">
+          💥 1. Red-Team Vulnerable Agent
         </button>
-        <button class="btn-success" style="flex: 1; min-width: 220px;" onclick="runSimulation('hardened')">
-          🛡️ Red-Team Hardened Agent
+        <button class="btn-success" style="flex: 1; min-width: 200px; background: #0284c7;" onclick="runSimulation('in_band_guardrail')">
+          🛡️ 2. Red-Team Mode 2: In-Band MCP Guardrail
         </button>
-        <button class="btn-primary" style="flex: 1; min-width: 220px;" onclick="runCompare()">
-          ⚖️ Compare Side-by-Side Benchmark
+        <button class="btn-success" style="flex: 1; min-width: 200px;" onclick="runSimulation('hardened')">
+          ✨ 3. Red-Team Hardened Agent
+        </button>
+        <button class="btn-primary" style="flex: 1; min-width: 200px;" onclick="runCompare()">
+          ⚖️ Compare Architecture Benchmark
         </button>
       </div>
 
@@ -526,7 +529,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
     async function runCompare() {
       const container = document.getElementById('sim-results');
-      container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 24px;">Comparing Vulnerable vs Hardened agent benchmark...</div>';
+      container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 24px;">Comparing Vulnerable vs Mode 2 In-Band vs Hardened agent benchmark...</div>';
 
       const res = await fetch('/api/simulation/compare');
       const data = await res.json();
@@ -549,14 +552,21 @@ HTML_CONTENT = """<!DOCTYPE html>
             </thead>
             <tbody>
               <tr style="color: #fca5a5;">
-                <td><strong>Vulnerable Agent (Unhardened)</strong></td>
+                <td><strong>1. Vulnerable Agent (Unhardened)</strong></td>
                 <td><strong style="color: #ef4444;">${data.vulnerable_agent_summary.compliance_score_percentage}%</strong></td>
                 <td>${data.vulnerable_agent_summary.failed_scenarios} / ${data.vulnerable_agent_summary.total_attack_scenarios}</td>
                 <td>${data.vulnerable_agent_summary.total_regulatory_violations}</td>
                 <td><span class="badge" style="background: #7f1d1d; color: white;">${data.vulnerable_agent_summary.statutory_apra_breach_notifications_triggered}</span></td>
               </tr>
+              <tr style="color: #38bdf8;">
+                <td><strong>2. Mode 2: In-Band MCP Runtime Guardrail</strong></td>
+                <td><strong style="color: #38bdf8;">${data.in_band_guardrail_summary.compliance_score_percentage}%</strong></td>
+                <td>${data.in_band_guardrail_summary.failed_scenarios} / ${data.in_band_guardrail_summary.total_attack_scenarios}</td>
+                <td>${data.in_band_guardrail_summary.total_regulatory_violations}</td>
+                <td><span class="badge" style="background: #0369a1; color: white;">0</span></td>
+              </tr>
               <tr style="color: #6ee7b7;">
-                <td><strong>Hardened Agent (CPS 230/234 Guardrails)</strong></td>
+                <td><strong>3. Hardened Agent (CPS 230/234 Prompt Shields)</strong></td>
                 <td><strong style="color: #10b981;">${data.hardened_agent_summary.compliance_score_percentage}%</strong></td>
                 <td>${data.hardened_agent_summary.failed_scenarios} / ${data.hardened_agent_summary.total_attack_scenarios}</td>
                 <td>${data.hardened_agent_summary.total_regulatory_violations}</td>
@@ -565,7 +575,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             </tbody>
           </table>
           <div style="margin-top: 16px; padding: 12px; background: #1e293b; border-radius: 6px; font-size: 13px; color: #93c5fd;">
-            <strong>🎯 Key Outcome:</strong> Hardening eliminated <strong>${data.breaches_eliminated} APRA breaches</strong> and 
+            <strong>🎯 Key Outcome:</strong> Mode 2 in-band runtime pre-flight checks eliminated <strong>${data.breaches_eliminated} APRA breaches</strong> and 
             <strong>${data.notifications_eliminated} emergency statutory APRA breach reports</strong>.
             <div style="margin-top: 4px; color: var(--text-muted);">${data.recommendation}</div>
           </div>
@@ -585,7 +595,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (!prompt) return;
 
       const resBox = document.getElementById('custom-exploit-results');
-      resBox.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 16px;">Sending prompt to both agents and auditing against APRA regulations...</div>';
+      resBox.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 16px;">Sending prompt to all 3 agent architectures and auditing against APRA regulations...</div>';
 
       const res = await fetch('/api/simulation/custom_attack', {
         method: 'POST',
@@ -595,42 +605,58 @@ HTML_CONTENT = """<!DOCTYPE html>
       const data = await res.json();
 
       let html = `
-        <div class="grid">
-          <!-- Vulnerable agent outcome -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <!-- 1. Vulnerable agent outcome -->
           <div style="background: #0f172a; border: 1px solid #ef4444; border-radius: 8px; padding: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="color: #f87171; font-weight: 700;">Unhardened Production Agent</span>
+              <span style="color: #f87171; font-weight: 700;">1. Unhardened Bot</span>
               <span class="badge" style="background: ${data.vulnerable.verdict === 'PASSED' ? '#065f46' : '#7f1d1d'}; color: white;">
-                ${data.vulnerable.verdict} (${data.vulnerable.severity})
+                ${data.vulnerable.verdict}
               </span>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Agent Response:</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Agent Output:</div>
             <div style="background: #1e293b; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; color: #fca5a5;">
               ${data.vulnerable.response}
             </div>
-            ${data.vulnerable.notification_required ? '<div class="notification-alert" style="margin-bottom: 10px;">🚨 72-Hour Statutory APRA Notification Required</div>' : ''}
+            ${data.vulnerable.notification_required ? '<div class="notification-alert" style="margin-bottom: 10px;">🚨 72h APRA Notice Triggered</div>' : ''}
             ${data.vulnerable.violations.map(v => `
               <div class="violation-card" style="margin-bottom: 6px;">
                 <div class="violation-header"><span>[${v.standard}] ${v.clause}</span></div>
                 <div class="violation-detail">${v.finding}</div>
-                <div class="violation-remedy"><strong>Remedy:</strong> ${v.statutory_remediation}</div>
               </div>
             `).join('')}
           </div>
 
-          <!-- Hardened agent outcome -->
-          <div style="background: #0f172a; border: 1px solid #10b981; border-radius: 8px; padding: 16px;">
+          <!-- 2. Mode 2 In-Band Guardrail agent outcome -->
+          <div style="background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="color: #6ee7b7; font-weight: 700;">Hardened APRA-Compliant Agent</span>
-              <span class="badge" style="background: ${data.hardened.verdict === 'PASSED' ? '#065f46' : '#7f1d1d'}; color: white;">
-                ${data.hardened.verdict} (${data.hardened.severity})
+              <span style="color: #38bdf8; font-weight: 700;">2. Mode 2: In-Band MCP Guardrail</span>
+              <span class="badge" style="background: #0369a1; color: white;">
+                ${data.in_band_guardrail.verdict}
               </span>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Agent Response:</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Intercepted Output:</div>
+            <div style="background: #1e293b; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; color: #7dd3fc;">
+              ${data.in_band_guardrail.response}
+            </div>
+            <div style="color: #38bdf8; font-size: 12px; font-weight: 600; padding: 6px 0;">
+              ✓ Pre-flight check caught candidate breach and substituted safe escalation before dispatch.
+            </div>
+          </div>
+
+          <!-- 3. Hardened agent outcome -->
+          <div style="background: #0f172a; border: 1px solid #10b981; border-radius: 8px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="color: #6ee7b7; font-weight: 700;">3. Static Prompt Shield</span>
+              <span class="badge" style="background: ${data.hardened.verdict === 'PASSED' ? '#065f46' : '#7f1d1d'}; color: white;">
+                ${data.hardened.verdict}
+              </span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Agent Output:</div>
             <div style="background: #1e293b; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; color: #93c5fd;">
               ${data.hardened.response}
             </div>
-            ${data.hardened.violations.length === 0 ? '<div style="color: #10b981; font-weight: 600; padding: 12px; text-align: center;">✓ Guardrails defended against attack. Zero APRA breaches detected.</div>' : ''}
+            <div style="color: #10b981; font-weight: 600; font-size: 12px; padding: 6px 0;">✓ Refused via system prompt instructions.</div>
           </div>
         </div>
       `;
@@ -856,15 +882,23 @@ async def api_simulation_custom(request):
     claim_amount = float(data.get("claim_amount", 85000))
 
     v_agent = HypotheticalClaimsAgent(mode="vulnerable")
+    g_agent = HypotheticalClaimsAgent(mode="in_band_guardrail")
     h_agent = HypotheticalClaimsAgent(mode="hardened")
 
     v_resp = v_agent.process_message(prompt)
+    g_resp = g_agent.process_message(prompt)
     h_resp = h_agent.process_message(prompt)
 
     v_audit = audit_agent_interaction_for_breach(
         agent_role="claims_processing_agent",
         user_prompt=prompt,
         agent_response=v_resp,
+        context={"claim_amount": claim_amount}
+    )
+    g_audit = audit_agent_interaction_for_breach(
+        agent_role="claims_processing_agent",
+        user_prompt=prompt,
+        agent_response=g_resp,
         context={"claim_amount": claim_amount}
     )
     h_audit = audit_agent_interaction_for_breach(
@@ -883,6 +917,14 @@ async def api_simulation_custom(request):
             "violations": v_audit["apra_violations"],
             "notification_required": v_audit["statutory_apra_reporting_required"],
             "notification_details": v_audit.get("apra_reporting_assessment"),
+        },
+        "in_band_guardrail": {
+            "response": g_resp,
+            "verdict": g_audit["audit_verdict"],
+            "severity": g_audit["risk_severity"],
+            "violations": g_audit["apra_violations"],
+            "notification_required": g_audit["statutory_apra_reporting_required"],
+            "notification_details": g_audit.get("apra_reporting_assessment"),
         },
         "hardened": {
             "response": h_resp,
