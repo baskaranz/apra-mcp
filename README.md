@@ -112,7 +112,8 @@ A local visual dashboard for red-teaming autonomous agents, running search queri
 uv run python -m src.web_ui
 ```
 Open **`http://localhost:8080`** in your browser. Features:
-* **🤖 Live Claims Agent Simulator**: One-click red-teaming of vulnerable vs hardened agents, live compliance scorecards, and interactive custom exploit tester.
+* **💬 Live Agent Chat (With vs. Without MCP)**: Interactive conversation playground where you can toggle between running the agent **Without APRA MCP** (unhardened), **Hooked to APRA MCP** (Mode 2 in-band pre-flight guardrail), or in a **Side-by-Side Dual Comparison** to see real-time breach detection and interception.
+* **🤖 Batch Red-Team Benchmark**: One-click red-teaming across statutory exploit suites with compliance scorecards.
 * **🛡️ Manual Interaction Audit**: Test presets (PII exfiltration, coerced claims, hallucinated coverage) with visual breach severity alerts.
 * **🔎 Regulation Search**: Live search across CPS 230 and CPS 234.
 * **🚨 Notification Matrix**: Full timetable of APRA statutory reporting timeframes.
