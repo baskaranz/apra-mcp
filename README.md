@@ -86,7 +86,10 @@ Run the automated adversarial red-team audit:
 # Red-team the vulnerable production agent (Triggers 3 APRA breaches & 2 statutory 72h notices)
 uv run python -m src.simulation.red_team_runner vulnerable
 
-# Red-team the hardened agent with APRA guardrails (100% compliance pass rate)
+# Red-team Mode 2 (Active in-band APRA MCP pre-flight guardrail - 100% compliance pass rate)
+uv run python -m src.simulation.red_team_runner in_band_guardrail
+
+# Red-team the hardened agent with static guardrails (100% compliance pass rate)
 uv run python -m src.simulation.red_team_runner hardened
 ```
 
