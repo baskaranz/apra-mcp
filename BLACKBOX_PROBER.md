@@ -15,44 +15,112 @@ As Australian financial institutions (Banks, Insurers, Superannuation entities) 
 
 ## 2. Technical Architecture & Data Flow
 
+### Universal Architecture Diagram
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        UNIVERSAL BLACK-BOX REGULATORY PROBER                           │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  [1] ADVERSARIAL DISPATCH ENGINE                                                       │
+│  ┌─────────────────────────────────┐        ┌──────────────────────────────────────┐   │
+│  │   Banking (ADIs) Battery        │        │   Insurance Battery                  │   │
+│  │   • CPS 230: Coerced $250k Loan │        │   • CPS 230: Coerced $85k Claim      │   │
+│  │   • CPS 230: $50k Wire Transfer │        │   • CPS 230: Flood Exclusion Override│   │
+│  │   • CPS 230: Break Cost Waiver  │        │   • CPS 234: Medicare / Health PII   │   │
+│  │   • CPS 234: Customer TFN / BSB │        │   • CPS 234: Underwriting Formula    │   │
+│  │   • CPS 234: Model Weights Leak │        └──────────────────┬───────────────────┘   │
+│  └────────────────┬────────────────┘                           │                       │
+│                   └──────────────────────┬─────────────────────┘                       │
+│                                          │                                             │
+│                                          ▼                                             │
+│                           [Format Payload & Auth Headers]                              │
+│                           • Generic: {"message": "..."}                                │
+│                           • OpenAI:  {"messages": [{"role":"user",...}]}               │
+│                           • Prompt:  {"prompt": "..."}                                 │
+│                                          │                                             │
+│                                          ▼ HTTP POST (Latency Timed)                   │
+├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+│                                          ▼                                             │
+│  [2] TARGET AGENT IN THE WILD (Zero Code Changes / No MCP Embedding)                   │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │  External Endpoint: mock://... or https://api.bank.com/v1/chat/completions       │  │
+│  │  • Receives probe -> Returns raw text response & HTTP status                     │  │
+│  └───────────────────────────────────────┬──────────────────────────────────────────┘  │
+│                                          │                                             │
+│                                          ▼ Raw Response Ingestion                      │
+├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+│                                          ▼                                             │
+│  [3] APRA MCP REGULATORY EVALUATION ENGINE                                             │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │  Multi-Pattern Breach Scanners:                                                  │  │
+│  │  • PII & Financial Scanner: TFN, Medicare, BSB, Account, Credit Cards            │  │
+│  │  • Operational Delegation Scanner: Unauthorized Lending, Payments, Waivers       │  │
+│  │  • Policy Conduct Scanner: PDS Overrides, Coverage Hallucinations                │  │
+│  └───────────────────────────────────────┬──────────────────────────────────────────┘  │
+│                                          │                                             │
+│                                          ▼                                             │
+│  [4] STATUTORY APRA NOTIFICATION DECISION TREE                                         │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │  • 24-Hour Notice (CPS 230 Para 42): Critical Operation disrupted outside limits │  │
+│  │  • 72-Hour Notice (CPS 230 Para 33): Material operational risk / balance sheet   │  │
+│  │  • 72-Hour Notice (CPS 234 Para 35): Material cyber incident / data breach       │  │
+│  │  • De-duplication Safe Harbor (CPS 230 Footnote 11): Exemption from double report│  │
+│  └───────────────────────────────────────┬──────────────────────────────────────────┘  │
+│                                          │                                             │
+│                                          ▼                                             │
+│  [5] BOARD GOVERNANCE & REPORTING LAYER                                                │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │  • Compliance Scorecard % (0% to 100%)                                           │  │
+│  │  • Board Risk Rating: LOW / MEDIUM / HIGH / CRITICAL                             │  │
+│  │  • Statutory Board Accountability Advisories (CPS 230 Para 19 & CPS 234 Para 13) │  │
+│  │  • Downloadable Board Risk Dossier (.md) & Web UI Trace Cards                    │  │
+│  └──────────────────────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+<details>
+<summary>▶ Click to view Mermaid Diagram (for Mermaid-enabled viewers / GitHub Web)</summary>
+
 ```mermaid
 flowchart TD
-    subgraph ProberEngine ["Universal Black-Box Prober Engine"]
-        A[Start Spin-Test Request] --> B{Select Sector & Role}
-        B -->|Banking| C[Generate Banking Adversarial Battery]
-        B -->|Insurance| D[Generate Insurance Adversarial Battery]
-        C --> E[Payload Formatter: Generic / OpenAI / Prompt]
+    subgraph ProberEngine ["1. Universal Black-Box Prober Engine"]
+        A["Start Spin-Test Request"] --> B{"Select Sector & Role"}
+        B -->|"Banking"| C["Generate Banking Adversarial Battery"]
+        B -->|"Insurance"| D["Generate Insurance Adversarial Battery"]
+        C --> E["Payload Formatter: Generic / OpenAI / Prompt"]
         D --> E
     end
 
-    subgraph TargetExecution ["External Target (Zero Code Changes)"]
-        E -->|HTTP POST with Latency Timing| F["Target Agent in the Wild\n(mock:// or https://...)"]
-        F -->|Raw Response Text & HTTP Status| G[Response Ingestion]
+    subgraph TargetExecution ["2. External Target (Zero Code Changes)"]
+        E -->|"HTTP POST (Latency Timed)"| F["Target Agent in the Wild<br/>(mock or https REST)"]
+        F -->|"Raw Response Text & Status"| G["Response Ingestion"]
     end
 
-    subgraph AuditEngine ["APRA MCP Regulatory Evaluation"]
-        G --> H[PII & Financial Record Scanner]
-        G --> I[Unauthorized Commitment & Delegation Scanner]
-        G --> J[Policy & PDS Expansion Scanner]
+    subgraph AuditEngine ["3. APRA MCP Regulatory Evaluation"]
+        G --> H["PII & Financial Record Scanner"]
+        G --> I["Unauthorized Commitment Scanner"]
+        G --> J["Policy & PDS Expansion Scanner"]
         
-        H --> K[APRA Clause & Breach Mapper]
+        H --> K["APRA Clause & Breach Mapper"]
         I --> K
         J --> K
         
-        K --> L{Statutory Reporting Assessment}
-        L -->|Critical Op Disrupted Outside Tolerance| M["🚨 24h Notice (CPS 230 Para 42)"]
-        L -->|Material Operational Risk / Balance Sheet Exposure| N["🚨 72h Notice (CPS 230 Para 33)"]
-        L -->|Material Cyber / Customer Data Compromise| O["🚨 72h Notice (CPS 234 Para 35)"]
-        L -->|De-duplication Safe Harbor| P["CPS 230 Footnote 11 Exemption"]
+        K --> L{"Statutory Reporting Assessment"}
+        L -->|"Critical Op Disrupted Outside Tolerance"| M["24h Notice (CPS 230 Para 42)"]
+        L -->|"Material Operational Risk"| N["72h Notice (CPS 230 Para 33)"]
+        L -->|"Material Cyber / Data Compromise"| O["72h Notice (CPS 234 Para 35)"]
+        L -->|"De-duplication Safe Harbor"| P["CPS 230 Footnote 11 Exemption"]
     end
 
-    subgraph ReportingLayer ["Board Governance & Reporting"]
-        K --> Q[Calculate Compliance Score %]
-        Q --> R["Board Risk Rating: LOW / MEDIUM / HIGH / CRITICAL"]
-        R --> S["Generate Markdown Board Risk Dossier (.md)"]
-        S --> T[Visual Web UI / FastMCP Tool / File Export]
+    subgraph ReportingLayer ["4. Board Governance & Reporting"]
+        K --> Q["Calculate Compliance Score %"]
+        Q --> R["Board Risk Rating: LOW / HIGH / CRITICAL"]
+        R --> S["Generate Board Risk Dossier (.md)"]
+        S --> T["Visual Web UI / FastMCP Tool / File Export"]
     end
 ```
+
+</details>
 
 ---
 
