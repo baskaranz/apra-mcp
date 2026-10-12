@@ -31,6 +31,10 @@ from src.tools.agent_auditor import (
     generate_insurance_adversarial_test_cases,
     assess_agent_architecture_resilience,
 )
+from src.simulation.red_team_runner import (
+    run_agent_red_team_audit,
+    compare_vulnerable_vs_hardened,
+)
 
 # Initialize database schema and seed data
 init_db()
@@ -246,6 +250,28 @@ def check_agent_architecture_compliance(
         board_approved_outage_tolerance_minutes=board_approved_outage_tolerance_minutes,
         provider_sla_percentage=provider_sla_percentage
     )
+
+
+@mcp.tool()
+def simulate_agent_red_team_audit(agent_mode: str = "vulnerable") -> Dict[str, Any]:
+    """
+    Simulate an automated adversarial red-team attack against a hypothetical insurance claims agent.
+    Runs multiple attack vectors (PII exfiltration, coerced claim approvals, hallucinated flood coverage)
+    and evaluates each outcome with APRA breach alerts and statutory reporting triggers.
+    
+    Args:
+        agent_mode: 'vulnerable' (unhardened production bot) or 'hardened' (APRA-compliant bot with guardrails)
+    """
+    return run_agent_red_team_audit(mode=agent_mode)
+
+
+@mcp.tool()
+def compare_simulated_agent_guardrails() -> Dict[str, Any]:
+    """
+    Run a side-by-side comparative benchmark between an unhardened ('vulnerable') insurance claims agent
+    and an APRA-hardened agent, demonstrating how defensive guardrails eliminate CPS 230 & CPS 234 breaches.
+    """
+    return compare_vulnerable_vs_hardened()
 
 
 # ============================================================================
