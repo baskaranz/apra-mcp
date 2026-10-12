@@ -1,0 +1,114 @@
+{
+  "rules": [
+    {
+      "standard": "CPS 230",
+      "clause": "42",
+      "event_type": "disruption_outside_tolerance",
+      "timeframe": "24 hours",
+      "timeframe_hours": 24,
+      "urgency": "CRITICAL",
+      "trigger_condition": "Disruption to a critical operation that exceeds Board-approved tolerance levels (maximum outage duration, data loss tolerance, or minimum service level).",
+      "apra_reporting_content": [
+        "Nature of the disruption",
+        "Action taken to address the disruption",
+        "Likely impact on business operations, depositors, policyholders, or customers",
+        "Timeframe for returning to normal operations"
+      ],
+      "interaction_notes": "Fastest statutory reporting deadline in APRA regulations. Does NOT get waived if cyber-related; must report to APRA within 24 hours of exceeding tolerance."
+    },
+    {
+      "standard": "CPS 234",
+      "clause": "35",
+      "event_type": "material_information_security_incident",
+      "timeframe": "72 hours",
+      "timeframe_hours": 72,
+      "urgency": "HIGH",
+      "trigger_condition": "Information security or cyber incident that materially affected, or had the potential to materially affect, the entity or customer interests (financially or non-financially), OR incident that has been notified to other regulators (OAIC, ASIC, ACSC, overseas regulators).",
+      "apra_reporting_content": [
+        "Description of incident, root cause, and impacted information assets",
+        "Assessment of impact on confidentiality, integrity, and availability",
+        "Remediation and containment steps undertaken",
+        "Details of other regulators notified"
+      ],
+      "interaction_notes": "De-duplication rule: If an information security incident is reported to APRA under CPS 234 paragraph 35, CPS 230 Footnote 11 confirms it does NOT need to be separately reported under CPS 230 paragraph 33."
+    },
+    {
+      "standard": "CPS 230",
+      "clause": "33",
+      "event_type": "material_operational_risk_incident",
+      "timeframe": "72 hours",
+      "timeframe_hours": 72,
+      "urgency": "HIGH",
+      "trigger_condition": "Operational risk incident (non-cyber or broad operational failure) determined likely to have a material financial impact or material impact on the ability to maintain critical operations.",
+      "apra_reporting_content": [
+        "Root causes and description of operational failure",
+        "Financial impact assessment",
+        "Impact on critical operations",
+        "Remediation roadmap and control adjustments"
+      ],
+      "interaction_notes": "Covers operational failures (fraud, system crash, process breakdown, third-party failure). If purely an info sec incident reported under CPS 234, separate reporting here is exempt per Footnote 11."
+    },
+    {
+      "standard": "CPS 234",
+      "clause": "36",
+      "event_type": "material_control_weakness",
+      "timeframe": "10 business days",
+      "timeframe_days": 10,
+      "urgency": "MEDIUM",
+      "trigger_condition": "Material information security control weakness identified (e.g., via testing, internal audit, or penetration test) that the entity expects cannot be remediated in a timely manner.",
+      "apra_reporting_content": [
+        "Details of the control gap or vulnerability",
+        "Assets and systems exposed",
+        "Reason timely remediation is not feasible",
+        "Compensating controls and revised remediation plan"
+      ],
+      "interaction_notes": "Applies when vulnerabilities or audit findings cannot be closed within standard SLAs."
+    },
+    {
+      "standard": "CPS 230",
+      "clause": "68",
+      "event_type": "critical_operation_service_agreement",
+      "timeframe": "20 business days",
+      "timeframe_days": 20,
+      "urgency": "LOW",
+      "trigger_condition": "Entering into or materially changing an agreement for the provision of a service on which the entity relies to undertake a critical operation.",
+      "apra_reporting_content": [
+        "Details of service provider and services provided",
+        "Critical operation supported",
+        "Summary of due diligence and contract compliance with CPS 230 para 58"
+      ],
+      "interaction_notes": "Post-execution notification for critical operation agreements."
+    },
+    {
+      "standard": "CPS 230",
+      "clause": "69",
+      "event_type": "material_offshoring_arrangement",
+      "timeframe": "Prior to entering",
+      "timeframe_days": 0,
+      "urgency": "HIGH",
+      "trigger_condition": "Prior to entering into any material offshoring arrangement, or when there is a significant change proposed (including where data or personnel relevant to the service will be located offshore).",
+      "apra_reporting_content": [
+        "Jurisdiction and geographic location of provider, sub-contractors, and data",
+        "Assessment of jurisdictional legal/political risk and cloud sovereignty",
+        "Business continuity, disaster recovery, and exit arrangements"
+      ],
+      "interaction_notes": "Must occur BEFORE signing or executing the offshoring arrangement or moving data outside Australia."
+    },
+    {
+      "standard": "CPS 230",
+      "clause": "54",
+      "event_type": "annual_msp_register",
+      "timeframe": "Annual submission",
+      "timeframe_days": 365,
+      "urgency": "ROUTINE",
+      "trigger_condition": "Annual submission to APRA of the entity's complete register of material service providers.",
+      "apra_reporting_content": [
+        "Comprehensive inventory of all material service providers",
+        "Associated critical operations supported",
+        "Key fourth-party dependencies",
+        "Risk ratings and contract expiry dates"
+      ],
+      "interaction_notes": "Mandatory annual reporting requirement."
+    }
+  ]
+}
