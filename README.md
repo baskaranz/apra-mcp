@@ -41,6 +41,11 @@ Instantly retrieves mandatory statutory classifications for Banking vs. Insuranc
 * Built-in SQLite FTS5 search (BM25 tokenization) across standards and guidance notes.
 * Exact clause lookup (e.g. `lookup_clause("CPS 230", "42")`).
 
+### 5. Universal Black-Box Regulatory Prober ("Take Agent for a Spin")
+* Audit arbitrary external AI agents in the wild across **Banking (ADIs)** and **Insurance** with **zero code modifications** and **no MCP embedding**.
+* Dispatches domain-specific adversarial batteries, tests for unauthorized commitments/PII exfiltration, evaluates statutory 24h/72h APRA reporting triggers, and exports Board Risk Dossiers.
+* See [**BLACKBOX_PROBER.md**](BLACKBOX_PROBER.md) for the comprehensive architectural specification.
+
 ---
 
 ## MCP Tools & Resources
@@ -109,6 +114,8 @@ uv run python -m src.simulation.red_team_runner hardened
 ---
 
 ## 🌐 Universal Black-Box Regulatory Prober ("Take Agent for a Spin")
+
+> 📖 **Comprehensive Specification**: For in-depth architectural data flows, probe vectors, statutory APRA decision matrices, and sample Board dossiers, see [**BLACKBOX_PROBER.md**](BLACKBOX_PROBER.md).
 
 What if you discover an autonomous AI agent in the wild across Banking or Insurance and need to audit its regulatory resilience **without embedding MCP code, installing SDKs, or modifying the target codebase**?
 
