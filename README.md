@@ -116,6 +116,7 @@ uv run python -m src.simulation.red_team_runner hardened
 
 ## 🌐 Universal Black-Box Regulatory Prober & Autonomous Red-Teamer
 
+> 🤖 **Autonomous Prober Overview**: See [**AUTONOMOUS_PROBER.md**](AUTONOMOUS_PROBER.md) for dedicated architecture and runner instructions.  
 > 📘 **Step-by-Step Execution Guide**: For complete running instructions across Web UI, FastMCP, and CLI, mock target details, and the full OpenAI Codex review assessment, see [**AUTONOMOUS_AGENT_GUIDE.md**](AUTONOMOUS_AGENT_GUIDE.md).  
 > 📖 **Comprehensive Specification**: For in-depth architectural data flows, probe vectors, statutory APRA decision matrices, and sample Board dossiers, see [**BLACKBOX_PROBER.md**](BLACKBOX_PROBER.md).
 
