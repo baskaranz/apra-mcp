@@ -1834,6 +1834,8 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     .pill.pass { background: var(--pass-bg); color: var(--pass); }
     .pill.fail { background: var(--fail-bg); color: var(--fail); }
     .pill.skip { background: #eef1f5; color: var(--faint); }
+    .pill.error { background: var(--warn-bg); color: var(--warn); }
+    .stage.error .dot { background: var(--warn-bg); color: var(--warn); border-color: #f1dcb0; }
     .stage .status { flex: 0 0 auto; align-self: flex-start; }
 
     /* Verdict hero */
@@ -1851,6 +1853,7 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     .risk.LOW { background: var(--pass); }
     .risk.HIGH { background: var(--warn); }
     .risk.CRITICAL { background: var(--fail); }
+    .risk.UNREACHABLE { background: var(--muted); }
     .hero-main .target { font-size: 0.82rem; color: var(--muted); word-break: break-all; margin-bottom: 14px; }
     .chips { display: flex; gap: 10px; flex-wrap: wrap; }
     .chip { border: 1px solid var(--border); border-radius: 9px; padding: 9px 13px; min-width: 92px; }
@@ -1871,6 +1874,8 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     .vpill { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 6px; }
     .vpill.PASSED { background: var(--pass-bg); color: var(--pass); }
     .vpill.FAILED { background: var(--fail-bg); color: var(--fail); }
+    .vpill.ERROR { background: var(--warn-bg); color: var(--warn); }
+    details.finding.error { border-left: 4px solid var(--warn); }
     .finding-body { padding: 0 16px 16px; }
     .io { margin: 10px 0; }
     .io .tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
@@ -2044,10 +2049,11 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     function setStage(n, state, label) {
       const el = $("stage" + n);
       if (!el) return;
-      el.classList.remove("running", "pass", "fail", "skip");
+      el.classList.remove("running", "pass", "fail", "skip", "error");
       if (state === "running") el.classList.add("running");
       if (state === "pass") el.classList.add("pass");
       if (state === "fail") el.classList.add("fail");
+      if (state === "error") el.classList.add("error");
       const pill = el.querySelector(".pill");
       pill.className = "pill " + state;
       pill.textContent = label;
@@ -2118,15 +2124,26 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
             if (ev.type === "turn") {
               const t = ev.turn;
               turnData[t.turn_number] = t;
-              const passed = t.audit_verdict === "PASSED";
-              setStage(t.turn_number, passed ? "pass" : "fail", passed ? "Passed" : "Failed");
-              nextRunning = t.turn_number + 1;
-              if (nextRunning <= depth) {
-                setStage(nextRunning, "running", "Probing…");
-                msg.textContent = "Running stage " + nextRunning + " of " + depth + " …";
+              if (t.audit_verdict === "ERROR") {
+                setStage(t.turn_number, "error", "Unreachable");
+              } else {
+                const passed = t.audit_verdict === "PASSED";
+                setStage(t.turn_number, passed ? "pass" : "fail", passed ? "Passed" : "Failed");
+                nextRunning = t.turn_number + 1;
+                if (nextRunning <= depth) {
+                  setStage(nextRunning, "running", "Probing…");
+                  msg.textContent = "Running stage " + nextRunning + " of " + depth + " …";
+                }
               }
             } else if (ev.type === "done") {
               sawDone = true;
+              // any stage that never ran (e.g. after an unreachable short-circuit)
+              for (let n = 1; n <= depth; n++) {
+                if (!(n in turnData)) {
+                  const p = $("stage" + n) && $("stage" + n).querySelector(".pill");
+                  if (p && (p.classList.contains("running") || p.classList.contains("pending"))) setStage(n, "skip", "Not run");
+                }
+              }
               renderResults(ev, target);
               msg.textContent = "Audit complete in " + (ev.duration_seconds ?? "?") + "s.";
             } else if (ev.type === "error") {
@@ -2157,28 +2174,41 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     function renderResults(ev, target) {
       const s = ev.campaign_summary || {};
       lastDossier = ev.board_dossier_markdown || "";
-      const score = s.compliance_score_percentage ?? 0;
+      const unreachable = s.target_reachable === false || s.board_risk_rating === "UNREACHABLE";
+      const score = s.compliance_score_percentage;
       const risk = s.board_risk_rating || "—";
 
       // Score ring (native SVG stroke-dasharray)
       const C = 2 * Math.PI * 58;
       const arc = $("ringArc");
       arc.setAttribute("stroke-dasharray", C.toFixed(1));
-      arc.setAttribute("stroke-dashoffset", (C * (1 - score / 100)).toFixed(1));
-      const ringColor = risk === "LOW" ? "#15803d" : risk === "CRITICAL" ? "#c22a2a" : "#b4690e";
+      arc.setAttribute("stroke-dashoffset", (C * (1 - (unreachable ? 0 : (score ?? 0)) / 100)).toFixed(1));
+      const ringColor = unreachable ? "#8a94a6" : risk === "LOW" ? "#15803d" : risk === "CRITICAL" ? "#c22a2a" : "#b4690e";
       arc.setAttribute("stroke", ringColor);
-      $("ringPct").innerHTML = score + "<small>%</small>";
+      $("ringPct").innerHTML = unreachable ? "<small>n/a</small>" : (score + "<small>%</small>");
 
       $("riskBadge").className = "risk " + risk;
-      $("riskBadge").textContent = risk + " risk";
+      $("riskBadge").textContent = unreachable ? "UNREACHABLE" : (risk + " risk");
       $("verdictTarget").textContent = target;
-      $("cStages").textContent = (s.passed_turns ?? "—") + " / " + (s.total_turns_executed ?? "—");
-      $("cBreaches").textContent = s.total_statutory_violations ?? "—";
-      $("cNotices").textContent = s.mandatory_apra_notifications ?? "—";
-      $("methodNote").textContent =
-        "“Resisted” = share of stages with no detected breach. A breach is a heuristic match for an " +
-        "unauthorised commitment, PII/TFN disclosure, or invented coverage; each can trigger a mandatory " +
-        "APRA notification. Treat these as observations for human review.";
+      if (unreachable) {
+        $("cStages").textContent = "0 / 0";
+        $("cBreaches").textContent = "—";
+        $("cNotices").textContent = "—";
+        $("methodNote").textContent =
+          "The target could not be reached, so no behaviour was assessed. " +
+          (s.transport_error ? ("Transport error: " + s.transport_error) : "") +
+          " Check the endpoint URL, scheme and that the agent is running.";
+        document.querySelector(".headline").firstChild.textContent = "Could not assess ";
+      } else {
+        $("cStages").textContent = (s.passed_turns ?? "—") + " / " + (s.assessed_turns ?? s.total_turns_executed ?? "—");
+        $("cBreaches").textContent = s.total_statutory_violations ?? "—";
+        $("cNotices").textContent = s.mandatory_apra_notifications ?? "—";
+        $("methodNote").textContent =
+          "“Resisted” = share of stages with no detected breach. A breach is a heuristic match for an " +
+          "unauthorised commitment, PII/TFN disclosure, or invented coverage; each can trigger a mandatory " +
+          "APRA notification. Treat these as observations for human review.";
+        document.querySelector(".headline").firstChild.textContent = "Assessment complete ";
+      }
       $("verdict").style.display = "block";
 
       // Findings, assembled from streamed per-stage data
@@ -2186,22 +2216,27 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
       let html = "<h2>Stage findings</h2>";
       nums.forEach((num) => {
         const t = turnData[num];
+        const errored = t.audit_verdict === "ERROR";
         const passed = t.audit_verdict === "PASSED";
+        const cls = errored ? "error" : (passed ? "pass" : "fail");
+        const vlabel = errored ? "ERROR" : (passed ? "PASS" : "FAIL");
         const violations = (t.violations || []).map((v) =>
           '<div class="violation"><span class="c">[' + esc(v.standard) + " " + esc(v.clause) + "] </span>" +
           esc(v.finding) + '<div class="rem">Remediation: ' + esc(v.statutory_remediation) + "</div></div>"
         ).join("");
         const notice = t.apra_notification_triggered
           ? '<div class="notice">⚠️ Would trigger a mandatory APRA statutory notification</div>' : "";
+        const errNote = errored
+          ? '<div class="notice">⚠️ Target could not be reached — nothing was assessed. ' + esc(t.transport_error || "") + "</div>" : "";
         html +=
-          '<details class="finding ' + (passed ? "pass" : "fail") + '"' + (passed ? "" : " open") + ">" +
+          '<details class="finding ' + cls + '"' + (passed ? "" : " open") + ">" +
             "<summary><span class='sname'>Stage " + num + " · " + esc((STAGES[num-1]||{}).name || t.rung_name) + "</span>" +
-            "<span class='vpill " + esc(t.audit_verdict) + "'>" + (passed ? "PASS" : "FAIL") + "</span>" +
+            "<span class='vpill " + esc(t.audit_verdict) + "'>" + vlabel + "</span>" +
             "<span class='chev'>▸</span></summary>" +
             '<div class="finding-body">' +
               '<div class="io"><span class="tag">Probe sent</span><pre>' + esc(t.adversarial_prompt) + "</pre></div>" +
               '<div class="io"><span class="tag">Agent response</span><pre>' + esc(t.target_response) + "</pre></div>" +
-              notice + violations +
+              errNote + notice + violations +
               '<div class="latency">Latency ' + esc(t.latency_ms) + " ms · APRA tools consulted: " +
                 esc((t.mcp_tools_consulted || []).join(", ")) + "</div>" +
             "</div>" +
