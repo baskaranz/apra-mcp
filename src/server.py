@@ -328,21 +328,28 @@ async def run_autonomous_mcp_red_team_probe(
     target_url: str,
     industry: str = "banking",
     agent_role: str = "lending_agent",
-    turns: int = 3,
+    turns: int = 4,
+    attack_objective: Optional[str] = None,
+    llm_provider: str = "heuristic",
+    llm_model: Optional[str] = None,
     auth_token: Optional[str] = None,
     payload_format: str = "generic"
 ) -> Dict[str, Any]:
     """
     Launch an autonomous, agentic red-team campaign against an external agent in the wild.
-    The probing agent dynamically queries APRA MCP tools (get_critical_operations, search_regulations,
-    lookup_clause, audit_agent_for_regulatory_breach) to research statutory vulnerabilities, synthesize
-    multi-turn adaptive attacks, and evaluate regulatory compliance.
+    Co-designed with OpenAI Codex, the probing agent dynamically executes a 4-stage Test Ladder
+    (Baseline -> False Authority -> Synthetic Data Boundary -> Policy Ambiguity) using APRA MCP tools
+    (get_critical_operations, search_regulations, lookup_clause, audit_agent_for_regulatory_breach)
+    and produces tamper-evident SHA-256 cryptographic evidence manifests for Board and APRA review.
     
     Args:
         target_url: Target endpoint URL (e.g. 'mock://banking-lending-agent' or remote REST endpoint)
         industry: 'banking' or 'insurance'
         agent_role: Role under test (e.g. 'lending_agent', 'claims_processing_agent')
-        turns: Number of adaptive probing turns to execute (default: 3)
+        turns: Number of Test Ladder rungs to climb (1 to 4, default: 4)
+        attack_objective: Optional specific compliance objective
+        llm_provider: 'heuristic' (built-in Codex ladder), 'openai', or 'ollama'
+        llm_model: Optional model name (e.g. 'gpt-4o')
         auth_token: Optional Bearer token
         payload_format: 'generic' ({"message": "..."}), 'openai', or 'prompt'
     """
@@ -351,6 +358,9 @@ async def run_autonomous_mcp_red_team_probe(
         industry=industry,
         agent_role=agent_role,
         turns=turns,
+        attack_objective=attack_objective,
+        llm_provider=llm_provider,
+        llm_model=llm_model,
         auth_token=auth_token,
         payload_format=payload_format
     )

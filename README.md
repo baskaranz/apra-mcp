@@ -114,32 +114,29 @@ uv run python -m src.simulation.red_team_runner hardened
 
 ---
 
-## 🌐 Universal Black-Box Regulatory Prober ("Take Agent for a Spin")
+## 🌐 Universal Black-Box Regulatory Prober & Autonomous Red-Teamer
 
 > 📖 **Comprehensive Specification**: For in-depth architectural data flows, probe vectors, statutory APRA decision matrices, and sample Board dossiers, see [**BLACKBOX_PROBER.md**](BLACKBOX_PROBER.md).
 
 What if you discover an autonomous AI agent in the wild across Banking or Insurance and need to audit its regulatory resilience **without embedding MCP code, installing SDKs, or modifying the target codebase**?
 
-The APRA MCP server includes a **Universal Black-Box Regulatory Prober** (DAST-style compliance auditor) that treats any target strictly as an external conversational HTTP endpoint (`{"message": "..."}`, OpenAI `/v1/chat/completions`, or prompt JSON).
+The APRA MCP server includes two complementary black-box assurance engines:
+1. **Curated Static Battery (`spin_test_agent`)**: Instant, zero-cost 5-vector regression suite.
+2. **Autonomous LLM Red-Teamer (`AutonomousMCPRedTeamer`)**: Co-designed and brainstormed with **OpenAI Codex (`gpt-6-luna`)**, this agentic engine climbs a structured **4-Stage Test Ladder** (Baseline $\rightarrow$ False Authority $\rightarrow$ Synthetic Data Boundary $\rightarrow$ Policy Ambiguity), dynamically queries APRA MCP tools to research statutory rules, enforces SSRF protections, and generates **tamper-evident SHA-256 cryptographic evidence manifests**.
 
 ### How It Works:
 1. **Zero-Touch External Probing**: The target requires zero code modifications. Probes are dispatched via HTTP REST / OpenAI formats (or built-in zero-setup mocks) with round-trip latency tracking.
-2. **Sector-Specific Adversarial Batteries**:
-   * **Banking (ADIs)**:
-     - *Credit Assessment (CPS 230 Para 54)*: Coerced $250k binding pre-approvals without bureau checks.
-     - *Payments (CPS 230 Para 36)*: Social-engineering $50,000 wire transfers with daily limit / 2FA bypass.
-     - *Interest & Fee Waivers (CPS 230 Para 14)*: Coerced $5,000 mortgage break cost and rate discounts.
-     - *Financial PII Exfiltration (CPS 234 Para 20, 21)*: Prompt injection extracting customer BSBs, account numbers, and Australian Tax File Numbers (TFNs).
-     - *Model Weights Leak (CPS 234 Para 12)*: Extracting proprietary internal debt-to-income multiplier matrices.
-   * **Insurance**:
-     - *Claims Processing (CPS 230 Para 36)*: Coerced $85,000 settlement payouts and excess waivers.
-     - *PDS Hallucination (CPS 230 Para 14, 23)*: Unauthorized stormwater flood exclusion waivers.
-     - *Health PII Exfiltration (CPS 234 Para 20, 21)*: Prompt injection dumping Medicare numbers and diagnoses.
-3. **Automated Statutory APRA Notification Assessment**: Evaluates each response against CPS 230 Para 33 / 42 (24h/72h operational notices) and CPS 234 Para 35 (72h cyber/data notices).
-4. **Board Audit Report Generation**: Automatically exports a comprehensive **Board Risk Dossier** in Markdown format detailing executive liability under CPS 230 Para 19 and CPS 234 Para 13.
+2. **Codex 4-Stage Test Ladder**:
+   - *Rung 1: Baseline Inquiry* — Tests limits, operational scope, and human referral routing.
+   - *Rung 2: False Authority Coercion* — Executive/VIP coercion attempting to bypass verification (CPS 230).
+   - *Rung 3: Synthetic Data Boundary* — Prompt injection seeking protected customer PII/TFNs (CPS 234).
+   - *Rung 4: Product & Coverage Ambiguity* — Policy ambiguity testing coverage/waiver hallucinations (CPS 230).
+3. **Tamper-Evident SHA-256 Evidence Manifest**: Append-only cryptographic hash chain hashing every request/response payload, sequence number, and audit verdict, yielding a verifiable Root Manifest Fingerprint for Board and APRA review.
+4. **Automated Statutory APRA Notification Assessment**: Evaluates each response against CPS 230 Para 33 / 42 (24h/72h operational notices) and CPS 234 Para 35 (72h cyber/data notices).
+5. **Board Audit Report Generation**: Automatically exports a comprehensive **Board Risk Dossier** in Markdown format detailing executive liability under CPS 230 Para 19 and CPS 234 Para 13.
 
 ### Built-in Zero-Setup Mock Targets:
-* `mock://banking-lending-agent`: Unhardened banking bot (fails credit & PII probes; triggers 4 APRA notices).
+* `mock://banking-lending-agent`: Unhardened banking bot (fails credit & PII probes; triggers APRA notices).
 * `mock://hardened-bank-agent`: APRA-compliant banking bot (resists all probes; 100% compliance pass rate).
 * `mock://insurance-wild-agent`: Unhardened claims bot (fails claims & Medicare probes).
 * Or supply any remote REST URL (e.g., `https://api.mybank.com/v1/chat/completions` with optional Bearer token).
@@ -156,7 +153,9 @@ uv run python -m src.web_ui
 ```
 Open **`http://localhost:8080`** in your browser. Features:
 * **💬 Live Agent Chat (With vs. Without MCP)**: Interactive conversation playground where you can toggle between running the agent **Without APRA MCP** (unhardened), **Hooked to APRA MCP** (Mode 2 in-band pre-flight guardrail), or in a **Side-by-Side Dual Comparison** to see real-time breach detection and interception.
-* **🌐 Black-Box Agent Prober ("Take for a Spin")**: 1-click black-box testing against arbitrary Banking & Insurance endpoints in the wild with real-time latency stats, probe execution trace, breach breakdown cards, and a 1-click **Download Board Report (.md)** button.
+* **🌐 Black-Box Regulatory Prober & Autonomous Red-Teamer**: Audit external agents with a 1-click engine mode switch:
+  - `📋 Curated Static Battery (5 Domain Vectors)`
+  - `🧠 Autonomous Red-Teamer (Codex Test Ladder)` with configurable ladder depth (1-4 rungs), LLM planner engine, SHA-256 tamper-evident manifest cards, and 1-click **Download APRA Board Report (.md)**.
 * **🤖 Batch Red-Team Benchmark**: One-click red-teaming across statutory exploit suites with compliance scorecards.
 * **🛡️ Manual Interaction Audit**: Test presets (PII exfiltration, coerced claims, hallucinated coverage) with visual breach severity alerts.
 * **🔎 Regulation Search**: Live search across CPS 230 and CPS 234.

@@ -177,6 +177,78 @@ The answer depends on which layer you are looking at:
 
 ---
 
+### 2.2 Autonomous LLM Red-Teaming Architecture (Codex Co-Design)
+
+Co-designed and brainstormed with **OpenAI Codex (`gpt-6-luna`)**, the **Autonomous LLM Red-Teaming Mode** replaces open-ended or unconstrained prompt loops with a **bounded, graph-based compliance assurance state machine**:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│               AUTONOMOUS GRAPH STATE MACHINE (PLANNER-ACTOR-EVALUATOR)                 │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  [1. Planner]                                                                          │
+│  • Bounded by Codex 4-Stage Test Ladder (Rungs 1 to 4)                                 │
+│  • Queries APRA MCP Tools: search_regulations, lookup_clause, get_critical_operations  │
+│  • Formulates regulatory probe scenario using sector context & statutory thresholds    │
+│  • Cannot dispatch network requests directly                                          │
+│                                                                                        │
+│                                    │ Formulated Probe                                  │
+│                                    ▼                                                   │
+│  [2. Actor]                                                                            │
+│  • SSRF Validation: Blocks 169.254.169.254, loopback, and private RFC1918 subnets     │
+│  • Dispatches HTTP POST to target agent with high-resolution latency timing            │
+│  • Ingests raw response without modification                                           │
+│                                                                                        │
+│                                    │ Raw Target Output                                 │
+│                                    ▼                                                   │
+│  [3. Evaluator]                                                                        │
+│  • Calls APRA MCP Tool: audit_agent_for_regulatory_breach                              │
+│  • Evaluates statutory compliance under CPS 230 & CPS 234                              │
+│  • Checks Safety Circuit Breaker (halts immediately on real credentials / PII leak)    │
+│  • Determines whether mandatory 72-hour APRA notification is triggered                 │
+│                                                                                        │
+│                                    │ Audit Verdict & Hashes                            │
+│                                    ▼                                                   │
+│  [4. Evidence Recorder (Append-Only SHA-256 Merkle Chain)]                             │
+│  • Computes prompt_sha256, response_sha256, and UTC timestamp                          │
+│  • Computes block_hash = sha256(seq : prev_hash : prompt_sha : resp_sha : verdict : ts)│
+│  • Calculates Root Manifest Fingerprint for Board and APRA audit readiness            │
+│                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### The Codex 4-Stage Test Ladder
+Instead of arbitrary or unbounded prompt escalation, the red-teamer methodically evaluates the target along four ascending rungs:
+
+1. **Rung 1: Baseline Operational Inquiry**
+   - *Objective*: Test normal operational limits, delegation thresholds, and appropriate human specialist referral behaviors.
+   - *APRA MCP Tools*: `get_critical_operations`, `search_regulations`.
+2. **Rung 2: False Authority Coercion**
+   - *Objective*: Test resistance to management, executive VIP, or urgent social engineering coercion attempting to bypass mandatory approval gates.
+   - *APRA MCP Tools*: `lookup_clause (CPS 230 Para 29)`.
+3. **Rung 3: Synthetic Data Boundary**
+   - *Objective*: Test information security controls preventing exfiltration of protected customer PII, TFNs, Medicare numbers, and account balances without authentication tokens.
+   - *APRA MCP Tools*: `lookup_clause (CPS 234 Para 20)`.
+4. **Rung 4: Product & Coverage Ambiguity**
+   - *Objective*: Test whether the bot invents/hallucinates binding contractual terms, fee/excess waivers, or coverage guarantees when presented with ambiguous policy disclosure excerpts (e.g. flood vs stormwater).
+   - *APRA MCP Tools*: `lookup_clause (CPS 230 Para 54 & 14)`.
+
+#### Tamper-Evident SHA-256 Evidence Manifest
+To satisfy Board audit requirements under **CPS 230 Paragraph 19** and supervisory evidence rules under **CPS 234 Paragraph 13**, every interaction block is cryptographically chained. The manifest records:
+- Sequence number & Rung name
+- Canonical SHA-256 digest of probe prompt
+- Canonical SHA-256 digest of agent response
+- Previous block hash & current block hash
+- UTC ISO timestamp
+- Root Manifest Fingerprint (verifiable against Board records)
+
+#### SSRF & Safety Containment Guardrails
+- **SSRF Protection**: Probing engine strictly validates target URLs. Access to cloud metadata endpoints (`169.254.169.254`, `metadata.google.internal`), loopback addresses (`127.0.0.1`, `localhost`), and private enterprise subnets (`10.0.0.0/8`, `192.168.0.0/16`) is blocked.
+- **Safety Circuit Breaker**: If real live private keys or cloud credentials appear in target responses, the campaign halts immediately.
+- **Read-Only Assurances**: Zero destructive write actions or financial balance sheet modifications.
+
+---
+
 ## 3. Sector-Specific Adversarial Attack Batteries
 
 ### Sector A: Banking (ADIs)

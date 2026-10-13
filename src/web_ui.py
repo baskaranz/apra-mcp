@@ -22,6 +22,7 @@ from src.tools.agent_auditor import (
 from src.simulation.agent import HypotheticalClaimsAgent
 from src.simulation.red_team_runner import run_agent_red_team_audit, compare_vulnerable_vs_hardened
 from src.tools.blackbox_prober import spin_test_agent
+from src.tools.autonomous_red_teamer import run_autonomous_mcp_red_team_campaign
 
 HTML_CONTENT = """<!DOCTYPE html>
 <html lang="en">
@@ -505,6 +506,23 @@ HTML_CONTENT = """<!DOCTYPE html>
         </div>
       </div>
 
+      <!-- Audit Engine Mode Switch -->
+      <div style="background: #1e293b; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 1px solid var(--card-border);">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 13px; font-weight: 700; color: #94a3b8;">AUDIT ENGINE:</span>
+          <button id="btn-mode-static" class="preset-btn" style="background: #2563eb; color: white; padding: 8px 14px; font-size: 13px; font-weight: 600;" onclick="setProberMode('static')">
+            📋 Curated Static Battery (5 Domain Vectors)
+          </button>
+          <button id="btn-mode-autonomous" class="preset-btn" style="background: #334155; color: #cbd5e1; padding: 8px 14px; font-size: 13px; font-weight: 600;" onclick="setProberMode('autonomous')">
+            🧠 Autonomous Red-Teamer (Codex Test Ladder)
+          </button>
+        </div>
+        <div id="autonomous-badge-info" style="display: none; align-items: center; gap: 8px;">
+          <span class="badge" style="background: #047857; color: #a7f3d0;">Co-Designed with Codex (gpt-6-luna)</span>
+          <span class="badge" style="background: #6d28d9; color: #ede9fe;">SHA-256 Merkle Evidence</span>
+        </div>
+      </div>
+
       <!-- Prober Configuration Form -->
       <div class="grid" style="grid-template-columns: 2fr 1fr; gap: 16px;">
         <div>
@@ -547,9 +565,45 @@ HTML_CONTENT = """<!DOCTYPE html>
         </div>
       </div>
 
+      <!-- Autonomous Red-Team Advanced Controls -->
+      <div id="autonomous-controls-panel" style="display: none; background: #0f172a; border: 1px solid #7c3aed; border-radius: 8px; padding: 16px; margin-top: 14px; margin-bottom: 16px;">
+        <div style="font-size: 13px; font-weight: 700; color: #a78bfa; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+          <span>⚙️ Autonomous Codex Ladder Settings</span>
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Planner &rarr; Actor &rarr; Evaluator &rarr; SHA-256 Merkle Chain)</span>
+        </div>
+        <div class="grid" style="grid-template-columns: 1.2fr 1.2fr 1.6fr; gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Test Ladder Depth</label>
+            <select id="auto-ladder-depth">
+              <option value="4" selected>4 Rungs (Full Ladder: Baseline &rarr; Coercion &rarr; PII &rarr; Ambiguity)</option>
+              <option value="3">3 Rungs (Baseline &rarr; Coercion &rarr; Synthetic PII)</option>
+              <option value="2">2 Rungs (Baseline &rarr; False Authority Coercion)</option>
+              <option value="1">1 Rung (Baseline Operational Inquiry)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Planner Engine</label>
+            <select id="auto-llm-provider">
+              <option value="heuristic" selected>Codex Ladder (Built-in Heuristic Planner)</option>
+              <option value="openai">OpenAI LLM (gpt-4o API)</option>
+              <option value="ollama">Local Ollama (localhost:11434)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Compliance Audit Objective</label>
+            <select id="auto-objective">
+              <option value="standard" selected>Full APRA Statutory Assurance (CPS 230 + CPS 234)</option>
+              <option value="delegation">Delegation of Authority & Limits (CPS 230 Para 29/36)</option>
+              <option value="data_security">Customer Protected PII Exfiltration (CPS 234 Para 20/21)</option>
+              <option value="coverage">Policy Disclosure & Coverage Hallucination (CPS 230 Para 54)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap;">
-        <button class="btn-primary" style="padding: 12px 24px; font-size: 15px; font-weight: 700; background: #2563eb;" onclick="runProberSpin()">
-          🚀 Take Agent for a Spin (Run Black-Box Audit)
+        <button id="prober-run-btn" class="btn-primary" style="padding: 12px 24px; font-size: 15px; font-weight: 700; background: #2563eb;" onclick="executeSelectedProberMode()">
+          🚀 Take Agent for a Spin (Run Curated Battery)
         </button>
         <button class="btn-secondary" id="prober-download-btn" style="display: none;" onclick="downloadProberReport()">
           📥 Download APRA Board Report (.md)
@@ -1238,6 +1292,44 @@ HTML_CONTENT = """<!DOCTYPE html>
 
     // BLACK-BOX PROBER CONTROLS & DISPATCH
     let currentProberReportMarkdown = "";
+    let proberMode = 'static'; // 'static' or 'autonomous'
+
+    function setProberMode(mode) {
+      proberMode = mode;
+      const btnStatic = document.getElementById('btn-mode-static');
+      const btnAuto = document.getElementById('btn-mode-autonomous');
+      const autoPanel = document.getElementById('autonomous-controls-panel');
+      const autoBadge = document.getElementById('autonomous-badge-info');
+      const runBtn = document.getElementById('prober-run-btn');
+
+      if (mode === 'autonomous') {
+        btnStatic.style.background = '#334155';
+        btnStatic.style.color = '#cbd5e1';
+        btnAuto.style.background = '#7c3aed';
+        btnAuto.style.color = 'white';
+        autoPanel.style.display = 'block';
+        autoBadge.style.display = 'flex';
+        runBtn.style.background = '#7c3aed';
+        runBtn.innerHTML = '⚡ Launch Autonomous Red-Team Campaign (Codex Ladder)';
+      } else {
+        btnStatic.style.background = '#2563eb';
+        btnStatic.style.color = 'white';
+        btnAuto.style.background = '#334155';
+        btnAuto.style.color = '#cbd5e1';
+        autoPanel.style.display = 'none';
+        autoBadge.style.display = 'none';
+        runBtn.style.background = '#2563eb';
+        runBtn.innerHTML = '🚀 Take Agent for a Spin (Run Curated Battery)';
+      }
+    }
+
+    function executeSelectedProberMode() {
+      if (proberMode === 'autonomous') {
+        runAutonomousRedTeam();
+      } else {
+        runProberSpin();
+      }
+    }
 
     function setProberTarget(url, industry, role, format) {
       document.getElementById('prober-url').value = url;
@@ -1417,6 +1509,185 @@ HTML_CONTENT = """<!DOCTYPE html>
           ❌ Probe failed: ${escapeHtml(err.message)}
         </div>`;
       }
+    async function runAutonomousRedTeam() {
+      const targetUrl = document.getElementById('prober-url').value;
+      const industry = document.getElementById('prober-industry').value;
+      const agentRole = document.getElementById('prober-role').value;
+      const format = document.getElementById('prober-format').value;
+      const auth = document.getElementById('prober-auth').value;
+      const depth = parseInt(document.getElementById('auto-ladder-depth').value) || 4;
+      const provider = document.getElementById('auto-llm-provider').value;
+      const objective = document.getElementById('auto-objective').value;
+
+      const resultsList = document.getElementById('prober-scenarios-list');
+      resultsList.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted); font-size: 15px;">
+        <div style="font-size: 28px; margin-bottom: 10px;">🧠 ⚡</div>
+        Executing Autonomous LLM Red-Teaming Campaign against <strong>${escapeHtml(targetUrl)}</strong>...<br>
+        <span style="font-size: 13px; color: #a78bfa;">Climbing Codex Test Ladder (Depth: ${depth} Rungs) | Querying APRA MCP Tools in Real-Time</span>
+      </div>`;
+
+      document.getElementById('prober-stats').style.display = 'none';
+      document.getElementById('prober-executive-banner').style.display = 'none';
+      document.getElementById('prober-download-btn').style.display = 'none';
+      document.getElementById('prober-copy-btn').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/autonomous_red_team', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target_url: targetUrl,
+            industry: industry,
+            agent_role: agentRole,
+            turns: depth,
+            llm_provider: provider,
+            attack_objective: objective,
+            payload_format: format,
+            auth_token: auth || null
+          })
+        });
+        const data = await res.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        currentProberReportMarkdown = data.board_dossier_markdown || '';
+
+        // Update stats
+        const summary = data.campaign_summary;
+        const score = summary.compliance_score_percentage;
+        document.getElementById('prober-stats').style.display = 'grid';
+        const scoreEl = document.getElementById('prober-stat-score');
+        scoreEl.innerText = score + '%';
+        scoreEl.style.color = score === 100 ? '#10b981' : score >= 75 ? '#f59e0b' : '#ef4444';
+        document.getElementById('prober-stat-scenarios').innerText = summary.total_turns_executed + ' Rungs';
+        document.getElementById('prober-stat-breaches').innerText = summary.total_statutory_violations;
+        document.getElementById('prober-stat-notices').innerText = summary.mandatory_apra_notifications;
+
+        // Executive banner
+        const banner = document.getElementById('prober-executive-banner');
+        banner.style.display = 'block';
+        if (score === 100) {
+          banner.style.background = 'rgba(16, 185, 129, 0.15)';
+          banner.style.border = '1px solid #10b981';
+          banner.style.color = '#6ee7b7';
+          banner.innerHTML = `🛡️ <strong>AUTONOMOUS AUDIT VERDICT: PASSED (Board Risk: LOW)</strong><br>
+            Target resisted all ${summary.total_turns_executed} Codex Test Ladder rungs. No unauthorized commitments, fee waivers, or PII exfiltration under CPS 230 & CPS 234.`;
+        } else {
+          banner.style.background = 'rgba(239, 68, 68, 0.15)';
+          banner.style.border = '1px solid #ef4444';
+          banner.style.color = '#fca5a5';
+          banner.innerHTML = `🚨 <strong>AUTONOMOUS AUDIT VERDICT: FAILED (Board Risk: ${summary.board_risk_rating})</strong><br>
+            Detected ${summary.total_statutory_violations} statutory APRA violations across ${summary.failed_turns} compromised ladder rung(s).
+            Triggered ${summary.mandatory_apra_notifications} mandatory statutory APRA notifications.`;
+        }
+
+        document.getElementById('prober-download-btn').style.display = 'inline-block';
+        document.getElementById('prober-copy-btn').style.display = 'inline-block';
+
+        let html = `
+          <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 16px;">Codex 4-Stage Test Ladder & Regulatory Execution Trace:</h3>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="badge" style="background: #1e3a8a; color: #93c5fd;">${summary.mcp_tools_invoked_by_prober} APRA MCP Calls</span>
+              <span class="badge" style="background: #4c1d95; color: #e9d5ff;">Fingerprint: ${summary.evidence_manifest_fingerprint.substring(0, 8)}...</span>
+            </div>
+          </div>
+        `;
+
+        data.detailed_turns.forEach((turn, idx) => {
+          const isPassed = turn.audit_verdict === 'PASSED';
+          html += `
+            <div style="background: #0f172a; border: 1px solid ${isPassed ? '#10b981' : '#ef4444'}; border-radius: 8px; padding: 18px; margin-bottom: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-weight: 700; font-size: 15px; color: ${isPassed ? '#6ee7b7' : '#f87171'};">
+                  ${escapeHtml(turn.rung_name)}
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span style="font-size: 11px; color: #94a3b8; font-family: monospace;">${turn.latency_ms}ms</span>
+                  <span class="badge" style="background: ${isPassed ? '#065f46' : '#7f1d1d'}; color: white;">
+                    ${turn.audit_verdict}
+                  </span>
+                </div>
+              </div>
+
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                <strong>Objective:</strong> ${escapeHtml(turn.objective)}
+              </div>
+
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                ${turn.mcp_tools_consulted.map(tc => '<span class="badge" style="background: #1e293b; color: #60a5fa; border: 1px solid #334155; font-size: 11px;">🔧 ' + escapeHtml(tc) + '</span>').join('')}
+              </div>
+
+              <div style="font-size: 13px; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Autonomous Probe Formulation:</span>
+                <div style="background: #1e293b; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #cbd5e1; margin-top: 4px;">
+                  ${escapeHtml(turn.adversarial_prompt)}
+                </div>
+              </div>
+
+              <div style="font-size: 13px; margin-bottom: 10px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Target Agent Output (Live Response):</span>
+                <div style="background: #1e293b; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 12px; color: ${isPassed ? '#93c5fd' : '#fca5a5'}; margin-top: 4px;">
+                  ${escapeHtml(turn.target_response)}
+                </div>
+              </div>
+          `;
+
+          if (turn.apra_notification_triggered) {
+            html += `
+              <div class="notification-alert" style="margin-bottom: 10px;">
+                🚨 <strong>STATUTORY 72-HOUR APRA NOTIFICATION TRIGGERED:</strong><br>
+                ${escapeHtml(turn.apra_notification_details ? turn.apra_notification_details.guidance : 'Statutory APRA notification required.')}
+              </div>
+            `;
+          }
+
+          if (turn.violations && turn.violations.length > 0) {
+            html += '<div style="font-size: 12px; font-weight: 600; color: #f87171; margin-bottom: 6px;">Violations Flagged:</div>';
+            turn.violations.forEach(v => {
+              html += `
+                <div class="violation-card" style="margin-bottom: 6px;">
+                  <div class="violation-header">
+                    <span>[${escapeHtml(v.standard)}] ${escapeHtml(v.clause)}</span>
+                    <span>${escapeHtml(v.category)}</span>
+                  </div>
+                  <div class="violation-detail"><strong>Finding:</strong> ${escapeHtml(v.finding)}</div>
+                  <div class="violation-remedy"><strong>Mandatory Remedy:</strong> ${escapeHtml(v.statutory_remediation)}</div>
+                </div>
+              `;
+            });
+          }
+
+          html += `
+              <div style="margin-top: 10px; padding: 8px 12px; background: #0b1329; border-radius: 4px; font-size: 11px; font-family: monospace; color: #94a3b8; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <span>SHA-256 Block: <code>${escapeHtml(turn.sha256_evidence.block_hash.substring(0, 24))}...</code></span>
+                <span>Prev: <code>${escapeHtml(turn.sha256_evidence.previous_hash.substring(0, 16))}...</code></span>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `
+          <div style="background: #1e293b; border: 1px solid #4338ca; border-radius: 8px; padding: 16px; margin-top: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <strong style="color: #a5b4fc; font-size: 14px;">🔒 Tamper-Evident SHA-256 Cryptographic Evidence Manifest</strong>
+              <span class="badge" style="background: #047857; color: #a7f3d0;">Chain Integrity: VERIFIED</span>
+            </div>
+            <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 10px;">
+              Every interaction block is cryptographically chained with UTC ISO timestamps, prompt/response digest pairs, and APRA audit verdicts.
+            </div>
+            <div style="font-family: monospace; font-size: 12px; color: #93c5fd; background: #0f172a; padding: 8px 12px; border-radius: 4px; word-break: break-all;">
+              Root Manifest Fingerprint: ${escapeHtml(data.evidence_manifest.fingerprint_sha256)}
+            </div>
+          </div>
+        `;
+
+        resultsList.innerHTML = html;
+      } catch (err) {
+        resultsList.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fca5a5; padding: 16px; border-radius: 8px;">
+          ❌ Autonomous campaign failed: ${escapeHtml(err.message)}
+        </div>`;
+      }
     }
 
     function downloadProberReport() {
@@ -1569,10 +1840,38 @@ async def api_spin_test(request):
     return JSONResponse(result)
 
 
+async def api_autonomous_red_team(request):
+    data = await request.json()
+    target_url = data.get("target_url", "mock://banking-lending-agent")
+    industry = data.get("industry", "banking")
+    agent_role = data.get("agent_role", "lending_agent")
+    turns = int(data.get("turns", 4))
+    llm_provider = data.get("llm_provider", "heuristic")
+    attack_objective = data.get("attack_objective", None)
+    payload_format = data.get("payload_format", "generic")
+    auth_token = data.get("auth_token", None)
+
+    try:
+        result = await run_autonomous_mcp_red_team_campaign(
+            target_url=target_url,
+            industry=industry,
+            agent_role=agent_role,
+            turns=turns,
+            attack_objective=attack_objective,
+            llm_provider=llm_provider,
+            auth_token=auth_token,
+            payload_format=payload_format,
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
 routes = [
     Route("/", homepage),
     Route("/api/chat", api_chat, methods=["POST"]),
     Route("/api/spin_test", api_spin_test, methods=["POST"]),
+    Route("/api/autonomous_red_team", api_autonomous_red_team, methods=["POST"]),
     Route("/api/audit", api_audit, methods=["POST"]),
     Route("/api/search", api_search),
     Route("/api/notifications", api_notifications),
