@@ -69,6 +69,7 @@ Instantly retrieves mandatory statutory classifications for Banking vs. Insuranc
 | `get_insurance_red_team_test_cases` | Generates realistic adversarial red-team attack scenarios tailored for insurance agents. |
 | `check_agent_architecture_compliance` | Evaluates third-party LLM provider SLAs against Board-approved downtime tolerance under CPS 230. |
 | `probe_external_agent_for_apra_breaches` | **Black-Box Agent Prober ("Take for a Spin")**: Audits arbitrary external AI agents in the wild (Banking or Insurance) without code changes or MCP embedding. Runs domain probe batteries, detects statutory breaches, and generates downloadable Board Risk Dossiers. |
+| `run_autonomous_mcp_red_team_probe` | **Autonomous MCP Red-Team Campaign**: Agentic red-team loop where the probing agent dynamically queries APRA MCP tools to research statutory vulnerabilities, synthesize multi-turn adaptive attacks, and evaluate regulatory compliance. |
 | `get_sector_adversarial_test_suite` | Generates sector-specific adversarial test batteries (Banking: credit coercion, unauthenticated wire transfers, fee waivers, TFN leaks; Insurance: claims coercion, PDS hallucination, Medicare leaks). |
 
 ### Available Resources
@@ -248,7 +249,8 @@ apra-mcp/
 │   │   ├── operations.py      # Critical operations & MSPs
 │   │   ├── interactions.py    # CPS 230 vs CPS 234 interaction analysis
 │   │   ├── agent_auditor.py   # AI agent regulatory breach auditor
-│   │   └── blackbox_prober.py # Universal Black-Box Prober ("Take for a Spin")
+│   │   ├── blackbox_prober.py # Universal Black-Box Prober ("Take for a Spin")
+│   │   └── autonomous_red_teamer.py # Autonomous MCP Red-Team Campaign Engine
 │   └── simulation/
 │       ├── agent.py           # HypotheticalClaimsAgent (vulnerable & hardened)
 │       └── red_team_runner.py # Automated adversarial attack benchmark
@@ -256,6 +258,7 @@ apra-mcp/
     ├── test_server.py         # MCP server unit tests
     ├── test_agent_auditor.py  # Regulatory auditor test suite
     ├── test_blackbox_prober.py# Black-box external prober test suite
+    ├── test_autonomous_red_teamer.py # Autonomous MCP red-teamer tests
     └── test_simulation.py     # Agent simulation & red-teaming test suite
 ```
 

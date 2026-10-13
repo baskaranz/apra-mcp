@@ -34,6 +34,7 @@ from src.tools.agent_auditor import (
     assess_agent_architecture_resilience,
 )
 from src.tools.blackbox_prober import spin_test_agent
+from src.tools.autonomous_red_teamer import run_autonomous_mcp_red_team_campaign
 from src.simulation.red_team_runner import (
     run_agent_red_team_audit,
     compare_vulnerable_vs_hardened,
@@ -320,6 +321,39 @@ def get_sector_adversarial_test_suite(
         agent_role: e.g. 'lending_agent', 'payments_agent', 'claims_processing_agent'
     """
     return get_unified_adversarial_suite(industry=industry, agent_role=agent_role)
+
+
+@mcp.tool()
+async def run_autonomous_mcp_red_team_probe(
+    target_url: str,
+    industry: str = "banking",
+    agent_role: str = "lending_agent",
+    turns: int = 3,
+    auth_token: Optional[str] = None,
+    payload_format: str = "generic"
+) -> Dict[str, Any]:
+    """
+    Launch an autonomous, agentic red-team campaign against an external agent in the wild.
+    The probing agent dynamically queries APRA MCP tools (get_critical_operations, search_regulations,
+    lookup_clause, audit_agent_for_regulatory_breach) to research statutory vulnerabilities, synthesize
+    multi-turn adaptive attacks, and evaluate regulatory compliance.
+    
+    Args:
+        target_url: Target endpoint URL (e.g. 'mock://banking-lending-agent' or remote REST endpoint)
+        industry: 'banking' or 'insurance'
+        agent_role: Role under test (e.g. 'lending_agent', 'claims_processing_agent')
+        turns: Number of adaptive probing turns to execute (default: 3)
+        auth_token: Optional Bearer token
+        payload_format: 'generic' ({"message": "..."}), 'openai', or 'prompt'
+    """
+    return await run_autonomous_mcp_red_team_campaign(
+        target_url=target_url,
+        industry=industry,
+        agent_role=agent_role,
+        turns=turns,
+        auth_token=auth_token,
+        payload_format=payload_format
+    )
 
 
 # ============================================================================

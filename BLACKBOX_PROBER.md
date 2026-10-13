@@ -124,6 +124,59 @@ flowchart TD
 
 ---
 
+### 2.1 Probing Agent MCP Identity: Tool Provider vs. In-Process Engine
+
+A common architectural question is: **"Does our probing agent use MCP when targeting external agents?"**
+
+The answer depends on which layer you are looking at:
+
+```
+                      1. INBOUND AUDIT CALLS (Uses MCP)
+                      ┌────────────────────────────────────────┐
+                      │ • Claude Desktop / Cursor / IDE (MCP)  │
+                      │ • Local Web Studio Dashboard (HTTP)    │
+                      │ • Python CLI Script (Direct call)      │
+                      └───────────────────┬────────────────────┘
+                                          │
+                                          │ ✅ tools/call: probe_external_agent_for_apra_breaches
+                                          ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        OUR PROBING AGENT (src/tools/blackbox_prober.py)                │
+│                                                                                        │
+│  Layer A: MCP Server Tool Interface                                                    │
+│  • Exposed as FastMCP Tool: @mcp.tool() probe_external_agent_for_apra_breaches(...)    │
+│  • Exposed as FastMCP Tool: @mcp.tool() run_autonomous_mcp_red_team_probe(...)         │
+│                                                                                        │
+│  Layer B: Internal Execution Engine (In-Process Python)                                │
+│  • get_unified_adversarial_suite()  ──► Direct Python call (no loopback RPC overhead)  │
+│  • audit_agent_interaction_for_breach() ──► Direct regex & rules engine evaluation    │
+│  • assess_notification_requirements() ──► Direct statutory notification timetable     │
+│                                                                                        │
+│  Layer C: Autonomous MCP Red-Team Mode (src/tools/autonomous_red_teamer.py)            │
+│  • Dynamically queries MCP tools: get_critical_operations, search_regulations,         │
+│    lookup_clause, and audit_agent_for_regulatory_breach to adaptively red-team.       │
+└─────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                          │
+                                          │ ❌ NO MCP PROTOCOL HERE
+                                          │ 🌐 Outbound HTTP POST (Generic / OpenAI JSON)
+                                          ▼
+                        ┌───────────────────────────────────────┐
+                        │   External Target Agent in the Wild   │
+                        │   (Banking or Insurance Endpoint)     │
+                        │   • Zero MCP code or SDK required     │
+                        └───────────────────────────────────────┘
+```
+
+1. **Inbound (Auditor $\rightarrow$ Probing Agent)**: **YES.**  
+   Our probing agent **is an MCP tool** (`probe_external_agent_for_apra_breaches` and `run_autonomous_mcp_red_team_probe`). Clients invoke it via the MCP protocol.
+2. **Outbound (Probing Agent $\rightarrow$ External Target)**: **NO.**  
+   The external target receives plain HTTP REST (`{"message": "..."}` or OpenAI JSON). The external agent does not need MCP installed.
+3. **Internal Engine (Probing Agent Execution)**:
+   - **Deterministic Mode (`spin_test_agent`)**: Calls Python functions directly in-process to avoid loopback network RPC latency and ensure 100% reproducible, zero-cost compliance scorecards.
+   - **Autonomous Red-Team Mode (`AutonomousMCPRedTeamer`)**: Actively *consumes* APRA MCP tools (`get_critical_operations`, `search_regulations`, `lookup_clause`, `audit_agent_for_regulatory_breach`) in an agentic loop to research regulations and craft adaptive multi-turn attacks.
+
+---
+
 ## 3. Sector-Specific Adversarial Attack Batteries
 
 ### Sector A: Banking (ADIs)
