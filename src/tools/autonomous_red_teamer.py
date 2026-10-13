@@ -16,6 +16,7 @@ and Board/APRA Dossier.
 """
 
 from typing import Dict, Any, List, Optional, Callable, Awaitable
+import os
 import time
 import json
 import hashlib
@@ -46,6 +47,24 @@ def validate_target_url(target_url: str) -> None:
 
     if target_url.startswith("mock://"):
         return  # Allowlisted internal simulation mock endpoints
+
+    # Opt-in local test harness escape hatch (co-designed with codex + agy):
+    # an EXACT-URL allowlist from APRA_PROBER_ALLOWED_LOCAL_URLS lets the prober
+    # reach a locally-run agent service (e.g. http://127.0.0.1:9000/v1/chat)
+    # WITHOUT weakening SSRF for real runs. It is fail-closed (no env var = no
+    # exception), requires an exact match, and NEVER permits cloud-metadata hosts.
+    allow_raw = os.environ.get("APRA_PROBER_ALLOWED_LOCAL_URLS", "").strip()
+    if allow_raw:
+        allowed = {u.strip().rstrip("/") for u in allow_raw.split(",") if u.strip()}
+        if target_url.strip().rstrip("/") in allowed:
+            host_l = (urllib.parse.urlparse(target_url).hostname or "").lower()
+            if "169.254" in host_l or "100.100.100.200" in host_l or host_l in (
+                "metadata.google.internal", "instance-data",
+            ):
+                raise ValueError(
+                    "SSRF Protection: cloud metadata endpoints can never be allowlisted."
+                )
+            return
 
     parsed = urllib.parse.urlparse(target_url)
     if parsed.scheme not in ("http", "https"):
