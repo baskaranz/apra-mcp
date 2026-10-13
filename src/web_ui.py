@@ -1782,17 +1782,6 @@ SIMPLE_PROBE_HTML = """<!DOCTYPE html>
     .row { display: flex; gap: 14px; flex-wrap: wrap; }
     .row > .field { flex: 1 1 180px; }
     .field { margin-bottom: 16px; }
-    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 16px; }
-    .chip {
-      border: 1px solid var(--border);
-      background: #fff;
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      color: var(--ink);
-    }
-    .chip:hover { border-color: var(--accent); color: var(--accent); }
     button.run {
       width: 100%;
       padding: 13px;
@@ -1862,13 +1851,8 @@ SIMPLE_PROBE_HTML = """<!DOCTYPE html>
 
     <div class="panel">
       <div class="field">
-        <label for="target">Target agent endpoint <span class="hint">— HTTP(S) URL, or a built-in mock</span></label>
-        <input id="target" type="text" value="mock://banking-lending-agent" placeholder="https://api.yourbank.com/v1/chat" autocomplete="off" />
-        <div class="presets">
-          <span class="chip" data-url="mock://banking-lending-agent" data-industry="banking" data-role="lending_agent">🏦 Wild banking bot</span>
-          <span class="chip" data-url="mock://hardened-bank-agent" data-industry="banking" data-role="lending_agent">🛡️ Hardened bank bot</span>
-          <span class="chip" data-url="mock://insurance-wild-agent" data-industry="insurance" data-role="claims_processing_agent">🏥 Wild insurance bot</span>
-        </div>
+        <label for="target">Target agent endpoint <span class="hint">— the agent's HTTP(S) chat endpoint</span></label>
+        <input id="target" type="text" value="" placeholder="https://api.yourbank.com/v1/chat" autocomplete="off" />
       </div>
 
       <div class="row">
@@ -1922,14 +1906,6 @@ SIMPLE_PROBE_HTML = """<!DOCTYPE html>
   <script>
     const $ = (id) => document.getElementById(id);
     let lastDossier = "";
-
-    document.querySelectorAll(".chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        $("target").value = chip.dataset.url;
-        $("industry").value = chip.dataset.industry;
-        $("role").value = chip.dataset.role;
-      });
-    });
 
     function esc(s) {
       return String(s == null ? "" : s)
