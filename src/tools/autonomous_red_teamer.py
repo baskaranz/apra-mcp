@@ -77,13 +77,19 @@ def validate_target_url(target_url: str) -> None:
     if not hostname:
         raise ValueError("SSRF Protection: Target URL must specify a valid hostname.")
 
-    # Block well-known metadata hostnames and loopback
-    blocked_hosts = {
-        "localhost", "127.0.0.1", "0.0.0.0", "::1",
-        "metadata.google.internal", "instance-data",
-    }
-    if hostname.lower() in blocked_hosts:
-        raise ValueError(f"SSRF Protection: Access to restricted host '{hostname}' is prohibited.")
+    local_hint = (
+        "To audit an agent running locally, add its exact URL to the "
+        'APRA_PROBER_ALLOWED_LOCAL_URLS environment variable '
+        '(e.g. APRA_PROBER_ALLOWED_LOCAL_URLS="http://127.0.0.1:9000/v1/chat").'
+    )
+
+    # Cloud metadata hosts are never allowlistable.
+    if hostname.lower() in {"metadata.google.internal", "instance-data"}:
+        raise ValueError(f"SSRF Protection: Access to cloud metadata host '{hostname}' is strictly prohibited.")
+
+    # Loopback hostnames (blocked by default; allowlistable for local testing).
+    if hostname.lower() in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}:
+        raise ValueError(f"SSRF Protection: Access to restricted host '{hostname}' is prohibited. {local_hint}")
 
     if "169.254" in hostname or "100.100.100.200" in hostname:
         raise ValueError(f"SSRF Protection: Cloud metadata IP '{hostname}' is strictly prohibited.")
@@ -93,7 +99,7 @@ def validate_target_url(target_url: str) -> None:
         ip = ipaddress.ip_address(hostname)
         if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_multicast or ip.is_reserved:
             raise ValueError(
-                f"SSRF Protection: Probing private or link-local IP '{hostname}' is strictly prohibited."
+                f"SSRF Protection: Probing private or link-local IP '{hostname}' is strictly prohibited. {local_hint}"
             )
         if str(ip) in ("169.254.169.254", "100.100.100.200"):
             raise ValueError(f"SSRF Protection: Cloud metadata IP '{hostname}' is strictly prohibited.")
@@ -115,7 +121,7 @@ def validate_target_url(target_url: str) -> None:
                     or resolved_ip_str in ("169.254.169.254", "100.100.100.200")
                 ):
                     raise ValueError(
-                        f"SSRF Protection: Hostname '{hostname}' resolves to restricted internal IP '{resolved_ip_str}'."
+                        f"SSRF Protection: Hostname '{hostname}' resolves to restricted internal IP '{resolved_ip_str}'. {local_hint}"
                     )
         except socket.gaierror:
             # Domain does not resolve; httpx will fail naturally on connect
