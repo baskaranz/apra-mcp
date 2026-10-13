@@ -44,7 +44,7 @@ The 63 clauses split into two worlds:
 Unauthorised commitments, data/PII leakage, prompt-injection & jailbreaks, system-prompt/IP extraction, cross-session data bleed, output integrity & unfair decisions, resilience under malformed input, logging admissions.
 
 ### ⚪ Governance & process — a probe *cannot* see these
-Board accountability (230 §19, 234 §13), BCP & tolerance testing (§34/43/48/39), material-service-provider contracts & offshoring (§51–70), info-security capability & policy framework, asset-classification programs, independent control testing, internal audit (234 §15–34). **These require document and control review — not chat.**
+Board accountability (230 Para 19, 234 Para 13), BCP & tolerance testing (Para 34/43/48/39), material-service-provider contracts & offshoring (Para 51–70), info-security capability & policy framework, asset-classification programs, independent control testing, internal audit (234 Para 15–34). **These require document and control review — not chat.**
 
 > A UI-driven probe alone will *always* leave ~⅔ of the framework untouched. That isn't a bug in our build — it's the ceiling of the method. **Breaking through that ceiling is the product.**
 
@@ -59,13 +59,13 @@ Add the high-signal stages we're currently missing (each a *risk indicator* mapp
 
 | New probe stage | Clause (indicator) |
 | :-- | :-- |
-| Jailbreak / instruction-override robustness | CPS 234 §21 |
-| System-prompt / model / protected-IP extraction | CPS 234 §21 |
-| Cross-session memory & data-retention bleed | CPS 234 §20/21 |
-| Sensitive-data inference / reconstruction | CPS 234 §20/21 |
-| Unsafe failure under malformed / burst input (tolerance) | CPS 230 §39/42 |
-| Unlicensed advice / misleading output / unfair-decision bias | CPS 230 §14/23 |
-| Audit-trail & traceability admissions | CPS 234 §23 |
+| Jailbreak / instruction-override robustness | CPS 234 Para 21 |
+| System-prompt / model / protected-IP extraction | CPS 234 Para 21 |
+| Cross-session memory & data-retention bleed | CPS 234 Para 20/21 |
+| Sensitive-data inference / reconstruction | CPS 234 Para 20/21 |
+| Unsafe failure under malformed / burst input (tolerance) | CPS 230 Para 39/42 |
+| Unlicensed advice / misleading output / unfair-decision bias | CPS 230 Para 14/23 |
+| Audit-trail & traceability admissions | CPS 234 Para 23 |
 
 ### 4.2 Go deeper with *agentic, adaptive* probing
 The UI runs fixed heuristics. An **LLM-driven agent** researches the live clause text via MCP tools (`search_regulations`, `lookup_clause`, `get_critical_operations`), **crafts adaptive multi-turn attacks**, follows the agent's weaknesses, and reasons about whether a response is actually a breach — instead of regex-matching four scripted scenarios.
@@ -152,9 +152,9 @@ This is the credibility centrepiece: **we tell the Board exactly what we checked
 ## 10. Roadmap & the ask
 
 1. **Now (done):** behavioural UI probe + live assessment + agent test harness. ✅
-2. **Next:** expand the behavioural battery (§4.1) and ship the **per-clause coverage map** (§5).
-3. **Then:** the **adaptive MCP agent** (§4.2) + MCP runtime/CI integrations (§4.3).
-4. **Then:** the **control-review companion** (§4.4) for the governance clauses.
+2. **Next:** expand the behavioural battery (Para 4.1) and ship the **per-clause coverage map** (Para 5).
+3. **Then:** the **adaptive MCP agent** (Para 4.2) + MCP runtime/CI integrations (Para 4.3).
+4. **Then:** the **control-review companion** (Para 4.4) for the governance clauses.
 
 **The ask:** back Phase 2 — the deep MCP/agent. Phase 1 proves we can catch what agents *do*; Phase 2 is how we assure the *whole* of CPS 230 & 234, continuously, inside the institutions that are accountable for it.
 
