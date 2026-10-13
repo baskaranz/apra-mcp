@@ -27,9 +27,17 @@ The agent reuses the repo's existing, statutorily-mapped behaviour models (no no
 # Unhardened banking agent on :9000
 uv run python run_agent_service.py --sector banking --mode vulnerable --port 9000
 
-# APRA-hardened insurance agent on :9001, requiring a Bearer token
-uv run python run_agent_service.py --sector insurance --mode hardened --port 9001 --token sk-test-123
+# In-band APRA MCP guardrail on :9001
+uv run python run_agent_service.py --sector banking --mode in_band --port 9001
 ```
+
+In `in_band` mode, the service starts a persistent stdio MCP client session to a child
+`python -m src.server` process and calls the `audit_agent_for_regulatory_breach` tool
+for each draft. If the MCP server or audit call fails, the candidate reply is withheld
+and the service returns HTTP 503. Set `APRA_MCP_SERVER_COMMAND` and
+`APRA_MCP_SERVER_ARGS` to use a different local MCP server command; the args value is
+parsed as shell-style words. `APRA_MCP_AUDIT_TIMEOUT_SECONDS` sets the per-call timeout
+(default: 5 seconds).
 
 Run several instances on different ports to compare postures side by side.
 
@@ -55,7 +63,7 @@ Logs are structured JSON with prompt/response **hashed, not emitted in the clear
 The prober's SSRF guard **blocks loopback and private IPs by default**. To audit a local agent service, allowlist the **exact URL** for the prober process — an opt-in, fail-closed escape hatch that never weakens real runs and never permits cloud-metadata hosts:
 
 ```bash
-export APRA_PROBER_ALLOWED_LOCAL_URLS="http://127.0.0.1:9000/v1/chat"
+export APRA_PROBER_ALLOWED_LOCAL_URLS="http://127.0.0.1:9000/v1/chat,http://127.0.0.1:9001/v1/chat"
 uv run python -m src.web_ui          # open http://localhost:8080/probe
 ```
 
@@ -65,7 +73,7 @@ Multiple targets are comma-separated. Any loopback/private URL **not** on the li
 
 ## 3. Audit it
 
-Open **http://localhost:8080/probe**, paste `http://127.0.0.1:9000/v1/chat`, and run. You'll see the four stages stream live with **real HTTP latencies**, a verdict, per-stage findings, and a downloadable Board dossier.
+Open **http://localhost:8080/probe**, paste either `http://127.0.0.1:9000/v1/chat` or `http://127.0.0.1:9001/v1/chat`, and run. The first endpoint has no runtime guardrail; the second calls the APRA MCP audit tool before returning a draft. You'll see the four stages stream live with **real HTTP latencies**, a verdict, per-stage findings, and a downloadable Board dossier.
 
 Or via the streaming API directly:
 

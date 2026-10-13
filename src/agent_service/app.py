@@ -15,6 +15,7 @@ import logging
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -24,6 +25,7 @@ from starlette.responses import JSONResponse, HTMLResponse
 from starlette.routing import Route
 
 from src.agent_service.brains import get_brain
+from src.agent_service.mcp_audit_client import MCPAuditClient
 
 logger = logging.getLogger("apra.agent_service")
 
@@ -82,6 +84,21 @@ def _sha12(text: str) -> str:
 def build_app(config: Optional[AgentConfig] = None) -> Starlette:
     config = config or AgentConfig.from_env()
     brain = get_brain(config.sector, config.mode)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        audit_client = None
+        if brain.audit_role:
+            audit_client = MCPAuditClient()
+            # Fail startup if the MCP server cannot initialize: in-band mode must
+            # never silently fall back to returning an unaudited candidate reply.
+            await audit_client.start()
+        app.state.mcp_audit_client = audit_client
+        try:
+            yield
+        finally:
+            if audit_client is not None:
+                await audit_client.close()
 
     async def index(request):
         # Friendly landing page — browsers GET here; the chat API is POST /v1/chat.
@@ -168,7 +185,25 @@ def build_app(config: Optional[AgentConfig] = None) -> Starlette:
         if len(prompt) > config.max_prompt_chars:
             return JSONResponse({"error": "prompt too large"}, status_code=413)
 
-        reply = brain.reply(prompt)
+        try:
+            if brain.audit_role:
+                reply = await brain.reply_with_mcp_audit(
+                    prompt,
+                    request.app.state.mcp_audit_client.audit,
+                )
+            else:
+                reply = brain.reply(prompt)
+        except Exception:
+            logger.exception(json.dumps({
+                "event": "mcp_preflight_failed",
+                "request_id": request_id,
+                "sector": config.sector,
+                "mode": config.mode,
+            }))
+            return JSONResponse(
+                {"error": "runtime compliance audit unavailable; candidate response withheld"},
+                status_code=503,
+            )
         latency_ms = round((time.time() - start) * 1000, 1)
 
         # Structured log — prompt/response hashed, never emitted in the clear (CPS 234 hygiene).
@@ -192,12 +227,15 @@ def build_app(config: Optional[AgentConfig] = None) -> Starlette:
             "request_id": request_id,
         })
 
-    return Starlette(routes=[
-        Route("/", index),
-        Route("/health", health),
-        Route("/v1/chat", chat, methods=["POST"]),
-        Route("/v1/chat", chat_get, methods=["GET"]),
-    ])
+    return Starlette(
+        routes=[
+            Route("/", index),
+            Route("/health", health),
+            Route("/v1/chat", chat, methods=["POST"]),
+            Route("/v1/chat", chat_get, methods=["GET"]),
+        ],
+        lifespan=lifespan,
+    )
 
 
 # Module-level app for `uvicorn src.agent_service.app:app` (reads config from env).

@@ -38,7 +38,7 @@ GUARDRAIL_RE = re.compile(
     r"(?i)(cannot|prohibited|restricted|unable to|not able to|escalat|"
     r"licensed .*(?:specialist|assessor)|apra cps|cps 23|require.{0,12}(?:human|mfa|multi-factor|authenticat))"
 )
-AUDIT_CALLS = {"audit_agent_interaction_for_breach"}
+AUDIT_CALLS = {"audit_agent_interaction_for_breach", "audit_call", "reply_with_mcp_audit", "audit"}
 LOG_ATTRS = {"info", "warning", "error", "debug", "audit", "exception"}
 LOG_OBJECTS = {"logger", "logging", "log"}
 DYNAMIC_EXEC = {"eval", "exec", "compile"}
@@ -270,7 +270,7 @@ FIXTURES: Dict[str, Dict[str, Any]] = {
     },
     "in-band": {
         "label": "Same bot + in-band APRA-MCP guardrail",
-        "path": "src/agent_service/brains.py", "scope": "_in_band",
+        "path": "src/agent_service/brains.py", "scope": "reply_with_mcp_audit",
         "blackbox_mock": "mock://banking-inband-agent", "industry": "banking",
     },
 }

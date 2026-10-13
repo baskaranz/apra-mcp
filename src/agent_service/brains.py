@@ -1,25 +1,13 @@
-"""Agent "brains" for the hypothetical agent service.
+"""Agent behavior adapters for the standalone financial-services service."""
 
-Reuses the existing, statutorily-mapped behaviour models rather than introducing a new
-(non-deterministic) engine — per the codex + agy design review:
-  - Banking:   MockWildBankingAgent / MockHardenedBankingAgent  (src/tools/blackbox_prober.py)
-  - Insurance: HypotheticalClaimsAgent in its vulnerable/hardened modes (src/simulation/agent.py)
-  - in_band:   a generic APRA-MCP runtime pre-flight guardrail wrapping the vulnerable brain.
-"""
+from typing import Any, Callable, Dict
 
-from typing import Callable
-
-from src.tools.blackbox_prober import (
-    MockWildBankingAgent,
-    MockHardenedBankingAgent,
-)
+from src.tools.blackbox_prober import MockHardenedBankingAgent, MockWildBankingAgent
 from src.simulation.agent import HypotheticalClaimsAgent
-from src.tools.agent_auditor import audit_agent_interaction_for_breach
 
 SECTORS = ("banking", "insurance")
 MODES = ("vulnerable", "hardened", "in_band")
 
-# Default agent-role used when auditing a sector's draft action in in_band mode.
 _SECTOR_ROLE = {
     "banking": "lending_agent",
     "insurance": "claims_processing_agent",
@@ -27,48 +15,59 @@ _SECTOR_ROLE = {
 
 
 class Brain:
-    """Thin uniform adapter: give it a prompt, get the agent's reply string."""
+    """Agent draft behavior plus optional metadata for MCP pre-flight auditing."""
 
-    def __init__(self, name: str, fn: Callable[[str], str]):
+    def __init__(
+        self,
+        name: str,
+        fn: Callable[[str], str],
+        *,
+        audit_role: str | None = None,
+        audit_context: Dict[str, Any] | None = None,
+    ):
         self.name = name
         self._fn = fn
+        self.audit_role = audit_role
+        self.audit_context = audit_context or {}
 
     def reply(self, prompt: str) -> str:
+        if self.audit_role:
+            raise RuntimeError("In-band brains require reply_with_mcp_audit()")
         return self._fn(prompt)
 
+    async def reply_with_mcp_audit(self, prompt: str, audit_call: Callable[..., Any]) -> str:
+        """Draft locally, then ask the MCP tool before returning any candidate reply."""
+        if not self.audit_role:
+            return self._fn(prompt)
 
-def _in_band(draft_fn: Callable[[str], str], agent_role: str) -> Callable[[str], str]:
-    """Wrap a vulnerable brain with an APRA-MCP runtime pre-flight guardrail.
-
-    The raw agent drafts a candidate action; it is audited BEFORE dispatch and blocked
-    if any CPS 230 / CPS 234 statutory breach is detected.
-    """
-
-    def run(prompt: str) -> str:
-        draft = draft_fn(prompt)
-        audit = audit_agent_interaction_for_breach(
-            agent_role=agent_role,
+        draft = self._fn(prompt)
+        audit = await audit_call(
+            agent_role=self.audit_role,
             user_prompt=prompt,
             agent_response=draft,
-            context={},
+            context=self.audit_context,
         )
-        if audit.get("audit_verdict") == "FAILED":
-            violations = ", ".join(
-                f"[{v['standard']} {v['clause']}]" for v in audit.get("apra_violations", [])
-            )
-            return (
-                "[APRA MCP RUNTIME PRE-FLIGHT GUARDRAIL] Candidate action was blocked before "
-                f"dispatch due to a detected statutory violation ({violations}). Under APRA "
-                "CPS 230 Para 29 / CPS 234 Para 21, automated commitments are prohibited; the "
-                "request has been escalated to a licensed human officer."
-            )
-        return draft
+        verdict = audit.get("audit_verdict")
+        if verdict == "PASSED":
+            return draft
+        if verdict != "FAILED":
+            raise RuntimeError("MCP audit returned an unknown verdict")
 
-    return run
+        violations = ", ".join(
+            f"[{item.get('standard', 'APRA')} {item.get('clause', '')}]".strip()
+            for item in audit.get("apra_violations", [])
+        )
+        reason = f" ({violations})" if violations else ""
+        return (
+            "[APRA MCP RUNTIME PRE-FLIGHT GUARDRAIL] Candidate action was blocked before "
+            f"dispatch due to a detected statutory violation{reason}. Under APRA CPS 230 "
+            "Para 29 / CPS 234 Para 21, automated commitments are prohibited; the request "
+            "has been escalated to a licensed human officer."
+        )
 
 
 def get_brain(sector: str, mode: str) -> Brain:
-    """Resolve a (sector, mode) pair to a ready-to-use Brain."""
+    """Resolve a startup-fixed (sector, mode) pair to its agent draft behavior."""
     sector = (sector or "").lower().strip()
     mode = (mode or "").lower().strip()
     if mode in ("in_band_guardrail", "mcp_in_band"):
@@ -83,11 +82,19 @@ def get_brain(sector: str, mode: str) -> Brain:
             return Brain("banking/vulnerable", MockWildBankingAgent().process)
         if mode == "hardened":
             return Brain("banking/hardened", MockHardenedBankingAgent().process)
-        return Brain("banking/in_band", _in_band(MockWildBankingAgent().process, _SECTOR_ROLE["banking"]))
+        return Brain(
+            "banking/in_band",
+            MockWildBankingAgent().process,
+            audit_role=_SECTOR_ROLE["banking"],
+        )
 
-    # insurance
     if mode == "vulnerable":
         return Brain("insurance/vulnerable", HypotheticalClaimsAgent("vulnerable").process_message)
     if mode == "hardened":
         return Brain("insurance/hardened", HypotheticalClaimsAgent("hardened").process_message)
-    return Brain("insurance/in_band", HypotheticalClaimsAgent("in_band_guardrail").process_message)
+    return Brain(
+        "insurance/in_band",
+        HypotheticalClaimsAgent("vulnerable").process_message,
+        audit_role=_SECTOR_ROLE["insurance"],
+        audit_context={"claim_amount": 85000},
+    )
