@@ -381,7 +381,7 @@ def analyze_agent_code(
     INDICATOR vs MISSING vs UNVERIFIABLE_LOCALLY status. Findings map to clause
     relevance, not a compliance verdict.
 
-    Pass a built-in `fixture` (unprotected, in-band) or a `file_path` with an
+    Pass a built-in `fixture` (unprotected, guarded) or a `file_path` with an
     optional `scope` (class or function name).
     """
     from src.code_auditor.analyzer import analyze_fixture, analyze_scope

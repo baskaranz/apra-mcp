@@ -6,7 +6,10 @@ from src.tools.blackbox_prober import MockHardenedBankingAgent, MockWildBankingA
 from src.simulation.agent import HypotheticalClaimsAgent
 
 SECTORS = ("banking", "insurance")
-MODES = ("vulnerable", "hardened", "in_band")
+MODES = ("vulnerable", "hardened", "guarded")
+
+# Older names for the runtime-guardrail mode, accepted for backward compatibility.
+_GUARDED_ALIASES = ("guarded", "in_band", "in_band_guardrail", "mcp_in_band")
 
 _SECTOR_ROLE = {
     "banking": "lending_agent",
@@ -32,7 +35,7 @@ class Brain:
 
     def reply(self, prompt: str) -> str:
         if self.audit_role:
-            raise RuntimeError("In-band brains require reply_with_mcp_audit()")
+            raise RuntimeError("Guarded brains require reply_with_mcp_audit()")
         return self._fn(prompt)
 
     async def reply_with_mcp_audit(self, prompt: str, audit_call: Callable[..., Any]) -> str:
@@ -70,8 +73,8 @@ def get_brain(sector: str, mode: str) -> Brain:
     """Resolve a startup-fixed (sector, mode) pair to its agent draft behavior."""
     sector = (sector or "").lower().strip()
     mode = (mode or "").lower().strip()
-    if mode in ("in_band_guardrail", "mcp_in_band"):
-        mode = "in_band"
+    if mode in _GUARDED_ALIASES:
+        mode = "guarded"
     if sector not in SECTORS:
         raise ValueError(f"Unknown sector '{sector}'. Expected one of {SECTORS}.")
     if mode not in MODES:
@@ -83,7 +86,7 @@ def get_brain(sector: str, mode: str) -> Brain:
         if mode == "hardened":
             return Brain("banking/hardened", MockHardenedBankingAgent().process)
         return Brain(
-            "banking/in_band",
+            "banking/guarded",
             MockWildBankingAgent().process,
             audit_role=_SECTOR_ROLE["banking"],
         )
@@ -93,7 +96,7 @@ def get_brain(sector: str, mode: str) -> Brain:
     if mode == "hardened":
         return Brain("insurance/hardened", HypotheticalClaimsAgent("hardened").process_message)
     return Brain(
-        "insurance/in_band",
+        "insurance/guarded",
         HypotheticalClaimsAgent("vulnerable").process_message,
         audit_role=_SECTOR_ROLE["insurance"],
         audit_context={"claim_amount": 85000},

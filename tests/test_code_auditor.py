@@ -20,8 +20,8 @@ def test_unprotected_is_critical_with_hardcoded_pii():
     assert _by_id(r, "delegation_killswitch")["status"] == "CONTROL_MISSING"
 
 
-def test_in_band_verifies_audit_wiring():
-    r = analyze_fixture("in-band")
+def test_guarded_verifies_audit_wiring():
+    r = analyze_fixture("guarded")
     audit = _by_id(r, "audit_logging")
     assert audit["status"] == "CONTROL_VERIFIED"
     assert audit["evidence"]

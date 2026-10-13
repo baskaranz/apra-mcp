@@ -6,8 +6,8 @@ Examples
     # Unhardened banking agent on :9000
     uv run python run_agent_service.py --sector banking --mode vulnerable --port 9000
 
-    # In-band APRA MCP guardrail on :9001
-    uv run python run_agent_service.py --sector banking --mode in_band --port 9001
+    # Runtime APRA MCP guardrail on :9001
+    uv run python run_agent_service.py --sector banking --mode guarded --port 9001
 
 Then point the prober at it. Because the prober blocks loopback by default (SSRF),
 allowlist the exact URL for the web UI / campaign process:
@@ -53,7 +53,7 @@ def main():
     print(f"  Sector: {config.sector}   Mode: {config.mode}   Auth: {'on' if args.token else 'off'}")
     print(f"  Chat endpoint : {url}")
     print(f"  Health        : http://{args.host}:{args.port}/health")
-    if args.mode == "in_band":
+    if args.mode == "guarded":
         print("  Guardrail     : APRA MCP stdio client → audit_agent_for_regulatory_breach")
     print("-" * 70)
     print("  To probe it, allowlist the exact URL for the prober process:")

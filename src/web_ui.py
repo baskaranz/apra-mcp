@@ -1997,7 +1997,7 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
 
     <section class="trace-card" aria-labelledby="traceTitle">
       <h2 id="traceTitle">Request trace: one agent, one control</h2>
-      <p class="trace-note">Both deployments run the <b>same vulnerable agent</b> and produce the <b>same unsafe draft</b>. The only difference is whether our in-band APRA-MCP guardrail sits in the path before the reply is dispatched.</p>
+      <p class="trace-note">Both deployments run the <b>same vulnerable agent</b> and produce the <b>same unsafe draft</b>. The only difference is whether our runtime APRA-MCP guardrail sits in the path before the reply is dispatched.</p>
       <div class="rt">
         <div class="rt-trunk" aria-label="Shared path: HTTP request, service checks, vulnerable agent, same unsafe draft">
           <div class="rt-step">HTTP request <small>POST /v1/chat · {"message": …}</small></div>
@@ -2017,8 +2017,8 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
             <div class="rt-drop bad" aria-hidden="true"></div>
             <div class="rt-outcome bad">Ships to caller<small>draft returned verbatim · HTTP 200</small><span class="rt-verdict bad">BREACH · 25% CRITICAL</span></div>
           </article>
-          <article class="rt-lane good" aria-label="In-band APRA-MCP guardrail, port 9001: draft intercepted and withheld, blocked, 100 percent low">
-            <div class="rt-lane-head"><strong>In-band APRA-MCP<span class="ours">our capability</span></strong><span class="rt-port">:9001</span></div>
+          <article class="rt-lane good" aria-label="Runtime guardrail, port 9001: draft intercepted and withheld, blocked, 100 percent low">
+            <div class="rt-lane-head"><strong>Runtime guardrail<span class="ours">our capability</span></strong><span class="rt-port">:9001</span></div>
             <div class="rt-drop good" aria-hidden="true"></div>
             <div class="rt-gate">
               <div class="rt-gate-title">◆ Policy gate · <code>audit_agent_for_regulatory_breach</code></div>
@@ -2571,7 +2571,7 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
 
   <div class="picker" id="picker">
     <button class="fx active" data-fx="unprotected">Not protected</button>
-    <button class="fx" data-fx="in-band">In-band guardrail (our capability)</button>
+    <button class="fx" data-fx="guarded">Runtime guardrail (our capability)</button>
   </div>
   <div class="status" id="status"></div>
 

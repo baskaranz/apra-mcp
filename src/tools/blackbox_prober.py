@@ -141,7 +141,7 @@ async def execute_probe_against_target(
     # Route 1: Built-in Mock targets
     if target_url.startswith("mock://"):
         target_name = target_url.replace("mock://", "").strip().lower()
-        if "inband" in target_name or "in-band" in target_name or "guardrail" in target_name:
+        if "guarded" in target_name or "inband" in target_name or "in-band" in target_name or "guardrail" in target_name:
             # Unprotected brain + our APRA-MCP runtime pre-flight guardrail.
             from src.tools.agent_auditor import audit_agent_interaction_for_breach
             draft = MockWildBankingAgent().process(prompt)

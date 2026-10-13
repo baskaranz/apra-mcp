@@ -90,7 +90,7 @@ def build_app(config: Optional[AgentConfig] = None) -> Starlette:
         audit_client = None
         if brain.audit_role:
             audit_client = MCPAuditClient()
-            # Fail startup if the MCP server cannot initialize: in-band mode must
+            # Fail startup if the MCP server cannot initialize: guarded mode must
             # never silently fall back to returning an unaudited candidate reply.
             await audit_client.start()
         app.state.mcp_audit_client = audit_client

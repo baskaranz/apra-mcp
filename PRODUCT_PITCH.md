@@ -72,7 +72,7 @@ The UI runs fixed heuristics. An **LLM-driven agent** researches the live clause
 
 ### 4.3 Go **MCP-native** — assurance where the agents already live
 Expose the whole capability as **MCP tools** so it drops into the entity's own stack:
-- **Runtime in-band guardrail** — pre-flight audit of an agent's draft action *before* dispatch (already prototyped) → continuous, not point-in-time.
+- **Runtime guardrail** — pre-flight audit of an agent's draft action *before* dispatch (already prototyped) → continuous, not point-in-time.
 - **CI / release gate** — fail a build if an agent regresses on a CPS control.
 - **Inside the client's own agents** — Claude Desktop, Cursor, IDEs, orchestration frameworks.
 

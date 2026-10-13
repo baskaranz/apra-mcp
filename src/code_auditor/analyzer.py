@@ -268,15 +268,19 @@ FIXTURES: Dict[str, Dict[str, Any]] = {
         "path": "src/tools/blackbox_prober.py", "scope": "MockWildBankingAgent",
         "blackbox_mock": "mock://banking-lending-agent", "industry": "banking",
     },
-    "in-band": {
-        "label": "Same bot + in-band APRA-MCP guardrail",
+    "guarded": {
+        "label": "Same bot + runtime APRA-MCP guardrail",
         "path": "src/agent_service/brains.py", "scope": "reply_with_mcp_audit",
-        "blackbox_mock": "mock://banking-inband-agent", "industry": "banking",
+        "blackbox_mock": "mock://banking-guarded-agent", "industry": "banking",
     },
 }
 
+# Older fixture keys accepted for backward compatibility.
+_FIXTURE_ALIASES = {"in-band": "guarded", "in_band": "guarded"}
+
 
 def analyze_fixture(name: str) -> Dict[str, Any]:
+    name = _FIXTURE_ALIASES.get(name, name)
     if name not in FIXTURES:
         raise ValueError(f"Unknown fixture '{name}'. Options: {', '.join(FIXTURES)}")
     fx = FIXTURES[name]

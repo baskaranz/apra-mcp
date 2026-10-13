@@ -1,4 +1,4 @@
-"""Persistent stdio MCP client used by the in-band agent guardrail."""
+"""Persistent stdio MCP client used by the runtime agent guardrail (guarded mode)."""
 
 import json
 import os

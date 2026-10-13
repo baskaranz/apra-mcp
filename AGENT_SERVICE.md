@@ -12,7 +12,7 @@ The `mock://` targets run *in-process* inside the prober. A standalone service e
 
 The agent reuses the repo's existing, statutorily-mapped behaviour models (no non-deterministic LLM calls, no real side effects):
 
-| Sector | `vulnerable` | `hardened` | `in_band` |
+| Sector | `vulnerable` | `hardened` | `guarded` |
 | :-- | :-- | :-- | :-- |
 | `banking` | leaks TFNs, approves coerced $250k loans, waives fees | refers to specialists, blocks overrides, shields PII | drafts a reply, then an **APRA-MCP pre-flight guardrail** blocks it if it breaches CPS 230/234 |
 | `insurance` | leaks Medicare data, approves coerced claims, invents cover | enforces PDS, escalates to human assessors | same runtime pre-flight guardrail |
@@ -27,11 +27,11 @@ The agent reuses the repo's existing, statutorily-mapped behaviour models (no no
 # Unhardened banking agent on :9000
 uv run python run_agent_service.py --sector banking --mode vulnerable --port 9000
 
-# In-band APRA MCP guardrail on :9001
-uv run python run_agent_service.py --sector banking --mode in_band --port 9001
+# Runtime APRA MCP guardrail on :9001
+uv run python run_agent_service.py --sector banking --mode guarded --port 9001
 ```
 
-In `in_band` mode, the service starts a persistent stdio MCP client session to a child
+In `guarded` mode, the service starts a persistent stdio MCP client session to a child
 `python -m src.server` process and calls the `audit_agent_for_regulatory_breach` tool
 for each draft. If the MCP server or audit call fails, the candidate reply is withheld
 and the service returns HTTP 503. Set `APRA_MCP_SERVER_COMMAND` and
@@ -44,7 +44,7 @@ Run several instances on different ports to compare postures side by side.
 | Flag | Default | Description |
 | :-- | :-- | :-- |
 | `--sector` / `-s` | `banking` | `banking` or `insurance` |
-| `--mode` / `-m` | `vulnerable` | `vulnerable`, `hardened`, or `in_band` |
+| `--mode` / `-m` | `vulnerable` | `vulnerable`, `hardened`, or `guarded` |
 | `--host` | `127.0.0.1` | Bind host |
 | `--port` / `-p` | `9000` | Bind port |
 | `--token` | _(none)_ | Optional Bearer token required on `/v1/chat` |
