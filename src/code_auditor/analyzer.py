@@ -263,20 +263,15 @@ def analyze_scope(path: str, scope: Optional[str] = None) -> Dict[str, Any]:
 # --- built-in demo fixtures -------------------------------------------------
 
 FIXTURES: Dict[str, Dict[str, Any]] = {
-    "wild-banking": {
-        "label": "Unhardened banking bot",
+    "unprotected": {
+        "label": "Unprotected banking bot",
         "path": "src/tools/blackbox_prober.py", "scope": "MockWildBankingAgent",
         "blackbox_mock": "mock://banking-lending-agent", "industry": "banking",
     },
-    "hardened-banking": {
-        "label": "APRA-hardened banking bot",
-        "path": "src/tools/blackbox_prober.py", "scope": "MockHardenedBankingAgent",
-        "blackbox_mock": "mock://hardened-bank-agent", "industry": "banking",
-    },
-    "runtime-guardrail": {
-        "label": "Runtime pre-flight guardrail (in-band MCP)",
+    "in-band": {
+        "label": "Same bot + in-band APRA-MCP guardrail",
         "path": "src/agent_service/brains.py", "scope": "_in_band",
-        "blackbox_mock": None, "industry": "banking",
+        "blackbox_mock": "mock://banking-inband-agent", "industry": "banking",
     },
 }
 

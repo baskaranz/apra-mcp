@@ -2361,9 +2361,8 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
   <p class="lede">First see what a black-box probe concludes from the agent's HTTP responses. Then reveal what reading the agent's actual source shows, with file:line evidence.</p>
 
   <div class="picker" id="picker">
-    <button class="fx active" data-fx="wild-banking">Unhardened banking bot</button>
-    <button class="fx" data-fx="hardened-banking">Hardened banking bot</button>
-    <button class="fx" data-fx="runtime-guardrail">Runtime guardrail (in-band)</button>
+    <button class="fx active" data-fx="unprotected">Not protected</button>
+    <button class="fx" data-fx="in-band">In-band guardrail (our capability)</button>
   </div>
   <div class="status" id="status"></div>
 
@@ -2392,7 +2391,7 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
 <script>
   var $ = function(id){ return document.getElementById(id); };
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-  var current = "wild-banking";
+  var current = "unprotected";
 
   function post(body){
     return fetch("/api/code_audit", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}).then(function(r){ return r.json(); });
@@ -2482,7 +2481,7 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
     b.classList.add("active"); selectFixture(b.dataset.fx);
   }); });
   $("revealBtn").addEventListener("click", revealCode);
-  selectFixture("wild-banking");
+  selectFixture("unprotected");
 </script>
 """
 
@@ -2642,7 +2641,7 @@ async def api_code_audit(request):
     "both" (default; used by the MCP/programmatic path)."""
     from src.code_auditor.analyzer import analyze_fixture, FIXTURES as CODE_FIXTURES
     data = await request.json()
-    fixture = data.get("fixture", "wild-banking")
+    fixture = data.get("fixture", "unprotected")
     phase = data.get("phase", "both")
     if fixture not in CODE_FIXTURES:
         return JSONResponse({"error": f"Unknown fixture '{fixture}'"}, status_code=400)

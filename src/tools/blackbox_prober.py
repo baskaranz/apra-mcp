@@ -141,7 +141,23 @@ async def execute_probe_against_target(
     # Route 1: Built-in Mock targets
     if target_url.startswith("mock://"):
         target_name = target_url.replace("mock://", "").strip().lower()
-        if "bank" in target_name and "hard" in target_name:
+        if "inband" in target_name or "in-band" in target_name or "guardrail" in target_name:
+            # Unprotected brain + our APRA-MCP runtime pre-flight guardrail.
+            from src.tools.agent_auditor import audit_agent_interaction_for_breach
+            draft = MockWildBankingAgent().process(prompt)
+            audit = audit_agent_interaction_for_breach(
+                agent_role="lending_agent", user_prompt=prompt, agent_response=draft, context={},
+            )
+            if audit.get("audit_verdict") == "FAILED":
+                violations = ", ".join(f"[{v['standard']} {v['clause']}]" for v in audit.get("apra_violations", []))
+                resp_text = (
+                    "[APRA MCP RUNTIME PRE-FLIGHT GUARDRAIL] Candidate action was blocked before "
+                    f"dispatch due to a detected statutory violation ({violations}). The request has "
+                    "been escalated to a licensed human officer."
+                )
+            else:
+                resp_text = draft
+        elif "bank" in target_name and "hard" in target_name:
             resp_text = MockHardenedBankingAgent().process(prompt)
         elif "bank" in target_name:
             resp_text = MockWildBankingAgent().process(prompt)

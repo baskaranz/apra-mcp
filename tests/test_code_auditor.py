@@ -9,8 +9,8 @@ def _by_id(report, fid):
     return next((f for f in report["findings"] if f["id"] == fid), None)
 
 
-def test_wild_banking_is_critical_with_hardcoded_pii():
-    r = analyze_fixture("wild-banking")
+def test_unprotected_is_critical_with_hardcoded_pii():
+    r = analyze_fixture("unprotected")
     assert r["code_posture"] == "CRITICAL"
     pii = _by_id(r, "hardcoded_pii")
     assert pii["status"] == "EXPOSURE"
@@ -20,24 +20,12 @@ def test_wild_banking_is_critical_with_hardcoded_pii():
     assert _by_id(r, "delegation_killswitch")["status"] == "CONTROL_MISSING"
 
 
-def test_hardened_banking_has_no_exposures():
-    r = analyze_fixture("hardened-banking")
-    assert r["summary"]["exposures"] == 0
-    # its "controls" are refusal text, not verified enforcement
-    assert _by_id(r, "hardcoded_pii")["status"] != "EXPOSURE"
-
-
-def test_runtime_guardrail_verifies_audit_wiring():
-    r = analyze_fixture("runtime-guardrail")
+def test_in_band_verifies_audit_wiring():
+    r = analyze_fixture("in-band")
     audit = _by_id(r, "audit_logging")
     assert audit["status"] == "CONTROL_VERIFIED"
     assert audit["evidence"]
-
-
-def test_missing_vs_unverifiable_distinction():
-    # hardened bot has no audit call -> UNVERIFIABLE_LOCALLY, not a hard MISSING
-    r = analyze_fixture("hardened-banking")
-    assert _by_id(r, "audit_logging")["status"] == "UNVERIFIABLE_LOCALLY"
+    assert r["summary"]["exposures"] == 0
 
 
 def test_unknown_fixture_raises():
