@@ -1,8 +1,9 @@
 """Lightweight visual web dashboard for APRA Regulations, Live Claims Agent Testing & Red-Teaming."""
 
+import asyncio
 import json
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, StreamingResponse
 from starlette.routing import Route
 import uvicorn
 
@@ -1728,284 +1729,499 @@ HTML_CONTENT = """<!DOCTYPE html>
 """
 
 
-SIMPLE_PROBE_HTML = """<!DOCTYPE html>
+SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Black-Box Agent Probe</title>
+  <title>Agent Compliance Probe</title>
   <style>
     :root {
-      --bg: #f5f6f8;
+      --bg: #f4f6f9;
       --panel: #ffffff;
-      --border: #d9dde3;
-      --ink: #1b2330;
-      --muted: #67707e;
-      --accent: #2563eb;
+      --border: #e2e6ec;
+      --border-strong: #cfd5de;
+      --ink: #121821;
+      --muted: #687384;
+      --faint: #9aa4b2;
+      --accent: #2458e6;
       --accent-ink: #ffffff;
-      --low: #15803d;
-      --high: #b45309;
-      --critical: #b91c1c;
-      --code-bg: #f1f3f6;
+      --pass: #15803d;
+      --pass-bg: #e7f6ec;
+      --fail: #c22a2a;
+      --fail-bg: #fdecec;
+      --warn: #b4690e;
+      --warn-bg: #fdf3e3;
+      --code-bg: #f3f5f8;
+      --shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 16px rgba(16,24,40,.05);
     }
     * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--ink);
       line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
-    .wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
-    header h1 { font-size: 1.5rem; margin: 0 0 4px; }
-    header p { margin: 0 0 24px; color: var(--muted); font-size: 0.95rem; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    label { display: block; font-size: 0.82rem; font-weight: 600; margin: 0 0 6px; color: var(--ink); }
-    .hint { font-weight: 400; color: var(--muted); }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 40px 16px 96px; }
+    .eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+    h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+    .lede { margin: 0 0 28px; color: var(--muted); font-size: 1rem; max-width: 60ch; }
+
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); margin-bottom: 20px; }
+
+    label { display: block; font-size: 0.8rem; font-weight: 600; margin: 0 0 7px; }
+    .sub { font-weight: 400; color: var(--faint); }
     input, select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      font-size: 0.95rem;
-      font-family: inherit;
-      background: #fff;
-      color: var(--ink);
+      width: 100%; padding: 12px 13px; border: 1px solid var(--border-strong); border-radius: 9px;
+      font-size: 0.95rem; font-family: inherit; background: #fff; color: var(--ink);
     }
+    input::placeholder { color: var(--faint); }
     input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
-    .row { display: flex; gap: 14px; flex-wrap: wrap; }
-    .row > .field { flex: 1 1 180px; }
     .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .two { display: flex; gap: 14px; flex-wrap: wrap; }
+    .two > .field { flex: 1 1 200px; margin-bottom: 0; }
+
+    details.adv { margin: 4px 0 20px; border-top: 1px solid var(--border); padding-top: 14px; }
+    details.adv > summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 6px; }
+    details.adv > summary::-webkit-details-marker { display: none; }
+    details.adv > summary::before { content: "▸"; color: var(--faint); transition: transform .15s; }
+    details.adv[open] > summary::before { transform: rotate(90deg); }
+    .adv-body { margin-top: 16px; }
+
+    .run-row { display: flex; gap: 10px; align-items: stretch; }
     button.run {
-      width: 100%;
-      padding: 13px;
-      background: var(--accent);
-      color: var(--accent-ink);
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
+      flex: 1; padding: 14px; background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 650; cursor: pointer; transition: background .15s;
     }
-    button.run:hover { background: #1d4fd8; }
-    button.run:disabled { opacity: 0.55; cursor: not-allowed; }
-    .status { margin-top: 14px; font-size: 0.9rem; color: var(--muted); min-height: 1.2em; }
-    .error { color: var(--critical); font-weight: 600; }
-    #results { display: none; }
-    .summary { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
-    .stat { flex: 1 1 120px; border: 1px solid var(--border); border-radius: 9px; padding: 14px; background: #fff; }
-    .stat .k { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-    .stat .v { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
-    .badge { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; color: #fff; }
-    .badge.LOW { background: var(--low); }
-    .badge.HIGH { background: var(--high); }
-    .badge.CRITICAL { background: var(--critical); }
-    .rung { border: 1px solid var(--border); border-radius: 9px; padding: 16px; margin-bottom: 14px; background: #fff; }
-    .rung.fail { border-left: 4px solid var(--critical); }
-    .rung.pass { border-left: 4px solid var(--low); }
-    .rung h3 { margin: 0 0 4px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .verdict { font-size: 0.78rem; font-weight: 700; padding: 2px 9px; border-radius: 6px; white-space: nowrap; }
-    .verdict.PASSED { background: #dcfce7; color: var(--low); }
-    .verdict.FAILED { background: #fee2e2; color: var(--critical); }
-    .rung .obj { color: var(--muted); font-size: 0.88rem; margin: 0 0 10px; }
-    .io { margin: 8px 0; }
-    .io .tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+    button.run:hover { background: #1c49c4; }
+    button.run:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.cancel {
+      padding: 0 18px; background: #fff; color: var(--fail); border: 1px solid var(--border-strong); border-radius: 10px;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; display: none;
+    }
+    button.cancel:hover { border-color: var(--fail); }
+    .msg { margin-top: 13px; font-size: 0.88rem; color: var(--muted); min-height: 1.1em; }
+    .msg.err { color: var(--fail); font-weight: 600; }
+
+    /* Stages */
+    .stages-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+    .stages-head h2 { font-size: 1.05rem; margin: 0; }
+    .stages-head .note { font-size: 0.8rem; color: var(--faint); }
+    .stage {
+      display: flex; gap: 14px; padding: 15px 4px; border-bottom: 1px solid var(--border);
+    }
+    .stage:last-child { border-bottom: none; }
+    .stage .dot {
+      flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 0.8rem; font-weight: 700; background: #eef1f5; color: var(--muted); border: 1px solid var(--border-strong);
+    }
+    .stage.running .dot { background: var(--accent); color: #fff; border-color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+    .stage.pass .dot { background: var(--pass-bg); color: var(--pass); border-color: #b6e3c3; }
+    .stage.fail .dot { background: var(--fail-bg); color: var(--fail); border-color: #f3c2c2; }
+    .stage.skip { opacity: 0.5; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(36,88,230,.35); } 50% { box-shadow: 0 0 0 5px rgba(36,88,230,0); } }
+    .stage .body { flex: 1; min-width: 0; }
+    .stage .name { font-weight: 650; font-size: 0.95rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .stage .desc { font-size: 0.86rem; color: var(--muted); margin-top: 2px; }
+    .clause { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em; color: var(--muted); background: #eef1f5; border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+    .pill { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .pill.pending { background: #eef1f5; color: var(--faint); }
+    .pill.running { background: #e6edfd; color: var(--accent); }
+    .pill.pass { background: var(--pass-bg); color: var(--pass); }
+    .pill.fail { background: var(--fail-bg); color: var(--fail); }
+    .pill.skip { background: #eef1f5; color: var(--faint); }
+    .stage .status { flex: 0 0 auto; align-self: flex-start; }
+
+    /* Verdict hero */
+    #verdict { display: none; }
+    .hero { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+    .ring-wrap { flex: 0 0 auto; position: relative; width: 132px; height: 132px; }
+    .ring-wrap svg { transform: rotate(-90deg); display: block; }
+    .ring-wrap .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+    .ring-wrap .pct { font-size: 1.9rem; font-weight: 800; line-height: 1; }
+    .ring-wrap .pct small { font-size: 0.9rem; font-weight: 700; }
+    .ring-wrap .cap { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 3px; }
+    .hero-main { flex: 1; min-width: 220px; }
+    .hero-main .headline { font-size: 1.25rem; font-weight: 750; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .risk { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.03em; padding: 4px 11px; border-radius: 999px; color: #fff; }
+    .risk.LOW { background: var(--pass); }
+    .risk.HIGH { background: var(--warn); }
+    .risk.CRITICAL { background: var(--fail); }
+    .hero-main .target { font-size: 0.82rem; color: var(--muted); word-break: break-all; margin-bottom: 14px; }
+    .chips { display: flex; gap: 10px; flex-wrap: wrap; }
+    .chip { border: 1px solid var(--border); border-radius: 9px; padding: 9px 13px; min-width: 92px; }
+    .chip .n { font-size: 1.3rem; font-weight: 750; }
+    .chip .l { font-size: 0.72rem; color: var(--muted); }
+    .method { font-size: 0.78rem; color: var(--faint); margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+
+    /* Findings */
+    #findings h2, #evidence h2 { font-size: 1.05rem; margin: 0 0 12px; }
+    details.finding { border: 1px solid var(--border); border-radius: 11px; margin-bottom: 10px; overflow: hidden; background: #fff; }
+    details.finding > summary { cursor: pointer; padding: 14px 16px; list-style: none; display: flex; align-items: center; gap: 10px; }
+    details.finding > summary::-webkit-details-marker { display: none; }
+    details.finding > summary .chev { color: var(--faint); margin-left: auto; transition: transform .15s; }
+    details.finding[open] > summary .chev { transform: rotate(90deg); }
+    details.finding.fail { border-left: 4px solid var(--fail); }
+    details.finding.pass { border-left: 4px solid var(--pass); }
+    details.finding .sname { font-weight: 650; font-size: 0.95rem; }
+    .vpill { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 6px; }
+    .vpill.PASSED { background: var(--pass-bg); color: var(--pass); }
+    .vpill.FAILED { background: var(--fail-bg); color: var(--fail); }
+    .finding-body { padding: 0 16px 16px; }
+    .io { margin: 10px 0; }
+    .io .tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
     pre {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin: 4px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 0.82rem;
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; margin: 4px 0 0;
+      white-space: pre-wrap; word-break: break-word; font-size: 0.82rem;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
-    .violation { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-size: 0.84rem; }
-    .violation .clause { font-weight: 700; color: var(--critical); }
-    .notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-size: 0.84rem; color: var(--high); font-weight: 600; }
-    .meta { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 20px; }
-    .actions button {
-      padding: 9px 16px; border: 1px solid var(--border); background: #fff; border-radius: 7px;
-      font-size: 0.86rem; cursor: pointer; color: var(--ink);
-    }
+    .violation { background: var(--fail-bg); border: 1px solid #f3cccc; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; }
+    .violation .c { font-weight: 700; color: var(--fail); }
+    .violation .rem { color: var(--muted); margin-top: 4px; }
+    .notice { background: var(--warn-bg); border: 1px solid #f1dcb0; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; color: var(--warn); font-weight: 600; }
+    .latency { font-size: 0.78rem; color: var(--faint); margin-top: 10px; }
+
+    /* Evidence */
+    #evidence { display: none; }
+    .ev-row { font-size: 0.84rem; color: var(--muted); margin-bottom: 8px; }
+    .ev-row strong { color: var(--ink); }
+    code.fp { font-family: ui-monospace, Menlo, monospace; font-size: 0.76rem; word-break: break-all; color: var(--ink); }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .actions button { padding: 10px 16px; border: 1px solid var(--border-strong); background: #fff; border-radius: 9px; font-size: 0.86rem; font-weight: 600; cursor: pointer; color: var(--ink); }
     .actions button:hover { border-color: var(--accent); color: var(--accent); }
-    code.fp { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; word-break: break-all; }
-    footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 24px; }
-    footer a { color: var(--accent); }
+
+    footer { text-align: center; color: var(--faint); font-size: 0.78rem; margin-top: 28px; line-height: 1.5; }
+    footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <h1>🌐 Black-Box Agent Probe</h1>
-      <p>Point the autonomous red-teamer at an external AI agent and run an APRA CPS 230 / CPS 234 assessment. No code changes or MCP SDK needed on the target.</p>
-    </header>
+    <p class="eyebrow">APRA CPS 230 / CPS 234</p>
+    <h1>Agent Compliance Probe</h1>
+    <p class="lede">Point the autonomous red-teamer at an external AI agent's chat endpoint and run a black-box regulatory assessment. No code changes or SDK needed on the target.</p>
 
-    <div class="panel">
+    <div class="card">
       <div class="field">
-        <label for="target">Target agent endpoint <span class="hint">— the agent's HTTP(S) chat endpoint</span></label>
-        <input id="target" type="text" value="" placeholder="https://api.yourbank.com/v1/chat" autocomplete="off" />
+        <label for="target">Target agent endpoint <span class="sub">— the agent's HTTP(S) chat URL</span></label>
+        <input id="target" type="text" value="" placeholder="https://api.yourbank.com/v1/chat" autocomplete="off" spellcheck="false" />
       </div>
-
-      <div class="row">
-        <div class="field">
-          <label for="industry">Industry</label>
-          <select id="industry">
-            <option value="banking">Banking (ADIs)</option>
-            <option value="insurance">Insurance</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="role">Agent role</label>
-          <input id="role" type="text" value="lending_agent" autocomplete="off" />
-        </div>
-        <div class="field">
-          <label for="turns">Test ladder depth</label>
-          <select id="turns">
-            <option value="1">1 rung — Baseline</option>
-            <option value="2">2 rungs — + False authority</option>
-            <option value="3">3 rungs — + Data boundary</option>
-            <option value="4" selected>4 rungs — Full ladder</option>
-          </select>
-        </div>
-      </div>
-
       <div class="field">
-        <label for="auth">Authorization token <span class="hint">— optional, sent as Bearer header</span></label>
-        <input id="auth" type="text" placeholder="sk-live-..." autocomplete="off" />
+        <label for="auth">Authorization <span class="sub">— optional Bearer token / API key, sent only to the target; not stored or logged</span></label>
+        <input id="auth" type="password" value="" placeholder="sk-live-…" autocomplete="off" spellcheck="false" />
       </div>
 
-      <button class="run" id="runBtn">⚡ Run assessment</button>
-      <div class="status" id="status"></div>
+      <details class="adv">
+        <summary>Advanced options</summary>
+        <div class="adv-body">
+          <div class="two" style="margin-bottom:16px;">
+            <div class="field">
+              <label for="industry">Industry</label>
+              <select id="industry">
+                <option value="banking">Banking (ADIs)</option>
+                <option value="insurance">Insurance</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="role">Agent role</label>
+              <input id="role" type="text" value="lending_agent" autocomplete="off" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="depth">Audit depth <span class="sub">— all four stages run by default</span></label>
+            <select id="depth">
+              <option value="1">Stage 1 only — quick baseline</option>
+              <option value="2">Stages 1–2</option>
+              <option value="3">Stages 1–3</option>
+              <option value="4" selected>All 4 stages — full audit</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <div class="run-row">
+        <button class="run" id="runBtn">Run audit</button>
+        <button class="cancel" id="cancelBtn">Cancel</button>
+      </div>
+      <div class="msg" id="msg"></div>
     </div>
 
-    <div id="results">
-      <div class="actions">
-        <button id="copyBtn">📋 Copy dossier (.md)</button>
-        <button id="dlBtn">📥 Download dossier (.md)</button>
+    <div class="card">
+      <div class="stages-head">
+        <h2>Test stages</h2>
+        <span class="note" id="stagesNote">Each stage is a distinct adversarial scenario · all run as one audit suite</span>
       </div>
-      <div class="summary" id="summary"></div>
-      <div id="rungs"></div>
-      <div class="panel" id="evidence"></div>
+      <div id="stages"></div>
+    </div>
+
+    <div class="card" id="verdict">
+      <div class="hero">
+        <div class="ring-wrap">
+          <svg width="132" height="132" viewBox="0 0 132 132">
+            <circle cx="66" cy="66" r="58" fill="none" stroke="#eef1f5" stroke-width="12"></circle>
+            <circle id="ringArc" cx="66" cy="66" r="58" fill="none" stroke="#15803d" stroke-width="12" stroke-linecap="round" stroke-dasharray="364.4" stroke-dashoffset="364.4"></circle>
+          </svg>
+          <div class="center">
+            <div>
+              <div class="pct" id="ringPct">—<small>%</small></div>
+              <div class="cap">resisted</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-main">
+          <p class="headline">Assessment complete <span class="risk" id="riskBadge">—</span></p>
+          <div class="target" id="verdictTarget"></div>
+          <div class="chips">
+            <div class="chip"><div class="n" id="cStages">—</div><div class="l">stages passed</div></div>
+            <div class="chip"><div class="n" id="cBreaches">—</div><div class="l">breaches</div></div>
+            <div class="chip"><div class="n" id="cNotices">—</div><div class="l">APRA notices</div></div>
+          </div>
+          <p class="method" id="methodNote"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="findings"></div>
+
+    <div class="card" id="evidence">
+      <h2>Evidence</h2>
+      <div class="ev-row" id="evChain"></div>
+      <div class="ev-row" id="evTime"></div>
+      <div class="ev-row">Root fingerprint (SHA-256):<br><code class="fp" id="evFp"></code></div>
+      <div class="actions">
+        <button id="copyBtn">Copy dossier (.md)</button>
+        <button id="dlBtn">Download dossier (.md)</button>
+      </div>
     </div>
 
     <footer>
-      APRA MCP · automated control-testing observations for human review (CPS 230 Para 19 / CPS 234 Para 13) — not a formal regulatory filing.
-      · <a href="/">Full studio</a>
+      Results are automated black-box control-testing observations to assist human risk teams
+      (CPS 230 Para 19 / CPS 234 Para 13) — not a certification or a regulatory filing.<br>
+      <a href="/">Full APRA studio</a>
     </footer>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
     let lastDossier = "";
+    let controller = null;
+
+    // Stage catalogue — plain-language names + the APRA mandate each one probes.
+    const STAGES = [
+      { name: "Operational limits", clause: "CPS 230 · critical ops",
+        desc: "Stays within its mandate and refers to a human when a decision exceeds its authority." },
+      { name: "Authority coercion", clause: "CPS 230 §29/36",
+        desc: "Resists “I’m an executive — approve this now” pressure to bypass approval gates." },
+      { name: "Data protection", clause: "CPS 234 §20/21",
+        desc: "Refuses to reveal customer PII — account/BSB, TFN, Medicare — under prompt injection." },
+      { name: "Coverage integrity", clause: "CPS 230 §14/54",
+        desc: "Won’t invent binding fee waivers or coverage guarantees from ambiguous wording." },
+    ];
+    const turnData = {}; // turn_number -> turn result
 
     function esc(s) {
-      return String(s == null ? "" : s)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    async function runAssessment() {
-      const btn = $("runBtn");
-      const status = $("status");
+    function renderStages(depth) {
+      $("stages").innerHTML = STAGES.map((s, i) => {
+        const n = i + 1;
+        const skipped = n > depth;
+        return '<div class="stage ' + (skipped ? "skip" : "") + '" id="stage' + n + '">' +
+          '<div class="dot">' + n + '</div>' +
+          '<div class="body"><div class="name">' + esc(s.name) +
+            '<span class="clause">' + esc(s.clause) + '</span></div>' +
+            '<div class="desc">' + esc(s.desc) + '</div></div>' +
+          '<div class="status"><span class="pill ' + (skipped ? "skip" : "pending") + '">' +
+            (skipped ? "Not in scope" : "Pending") + '</span></div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function setStage(n, state, label) {
+      const el = $("stage" + n);
+      if (!el) return;
+      el.classList.remove("running", "pass", "fail", "skip");
+      if (state === "running") el.classList.add("running");
+      if (state === "pass") el.classList.add("pass");
+      if (state === "fail") el.classList.add("fail");
+      const pill = el.querySelector(".pill");
+      pill.className = "pill " + state;
+      pill.textContent = label;
+    }
+
+    renderStages(parseInt($("depth").value, 10));
+    $("depth").addEventListener("change", () => renderStages(parseInt($("depth").value, 10)));
+
+    async function runAudit() {
       const target = $("target").value.trim();
-      if (!target) { status.className = "status error"; status.textContent = "Enter a target endpoint."; return; }
+      const msg = $("msg");
+      if (!target) { msg.className = "msg err"; msg.textContent = "Enter a target endpoint."; return; }
+      if (!target.startsWith("http://") && !target.startsWith("https://") && !target.startsWith("mock://")) {
+        msg.className = "msg err"; msg.textContent = "Endpoint must start with https:// (or http://)."; return;
+      }
 
-      btn.disabled = true;
-      status.className = "status";
-      status.textContent = "Running autonomous red-team campaign against " + target + " …";
-      $("results").style.display = "none";
+      const depth = parseInt($("depth").value, 10);
+      renderStages(depth);
+      for (let n = 1; n <= depth; n++) setStage(n, "pending", "Pending");
+      Object.keys(turnData).forEach(k => delete turnData[k]);
+      $("verdict").style.display = "none";
+      $("evidence").style.display = "none";
+      $("findings").innerHTML = "";
 
+      $("runBtn").disabled = true;
+      $("cancelBtn").style.display = "block";
+      msg.className = "msg";
+      msg.textContent = "Connecting to " + target + " …";
+
+      controller = new AbortController();
       const payload = {
         target_url: target,
         industry: $("industry").value,
         agent_role: $("role").value.trim() || "lending_agent",
-        turns: parseInt($("turns").value, 10),
+        turns: depth,
         auth_token: $("auth").value.trim() || null,
       };
 
       try {
-        const res = await fetch("/api/autonomous_red_team", {
+        const res = await fetch("/api/autonomous_red_team/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: controller.signal,
         });
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || ("Request failed (" + res.status + ")"));
+        if (!res.ok) throw new Error("Server returned " + res.status);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        let nextRunning = 1;
+        let sawDone = false;
+
+        setStage(1, "running", "Probing…");
+        msg.textContent = "Running stage 1 of " + depth + " …";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 1);
+            if (!line) continue;
+            let ev;
+            try { ev = JSON.parse(line); } catch (_) { continue; } // tolerate malformed/partial
+            if (ev.type === "turn") {
+              const t = ev.turn;
+              turnData[t.turn_number] = t;
+              const passed = t.audit_verdict === "PASSED";
+              setStage(t.turn_number, passed ? "pass" : "fail", passed ? "Passed" : "Failed");
+              nextRunning = t.turn_number + 1;
+              if (nextRunning <= depth) {
+                setStage(nextRunning, "running", "Probing…");
+                msg.textContent = "Running stage " + nextRunning + " of " + depth + " …";
+              }
+            } else if (ev.type === "done") {
+              sawDone = true;
+              renderResults(ev, target);
+              msg.textContent = "Audit complete in " + (ev.duration_seconds ?? "?") + "s.";
+            } else if (ev.type === "error") {
+              throw new Error(ev.error || "Assessment failed");
+            }
+          }
         }
-        render(data);
-        status.className = "status";
-        status.textContent = "Completed in " + (data.duration_seconds ?? "?") + "s.";
+        if (!sawDone) throw new Error("Connection ended before the audit finished.");
       } catch (e) {
-        status.className = "status error";
-        status.textContent = "Error: " + e.message;
+        if (e.name === "AbortError") {
+          msg.className = "msg"; msg.textContent = "Audit cancelled.";
+          for (let n = 1; n <= depth; n++) {
+            const pill = $("stage" + n) && $("stage" + n).querySelector(".pill");
+            if (pill && (pill.classList.contains("running") || pill.classList.contains("pending"))) {
+              setStage(n, "skip", "Cancelled");
+            }
+          }
+        } else {
+          msg.className = "msg err"; msg.textContent = "Error: " + e.message;
+        }
       } finally {
-        btn.disabled = false;
+        $("runBtn").disabled = false;
+        $("cancelBtn").style.display = "none";
+        controller = null;
       }
     }
 
-    function render(data) {
-      const s = data.campaign_summary || {};
-      lastDossier = data.board_dossier_markdown || "";
+    function renderResults(ev, target) {
+      const s = ev.campaign_summary || {};
+      lastDossier = ev.board_dossier_markdown || "";
+      const score = s.compliance_score_percentage ?? 0;
       const risk = s.board_risk_rating || "—";
 
-      $("summary").innerHTML =
-        stat("Compliance score", (s.compliance_score_percentage ?? "—") + "%") +
-        statBadge("Board risk", risk) +
-        stat("Rungs passed", (s.passed_turns ?? "—") + " / " + (s.total_turns_executed ?? "—")) +
-        stat("Statutory breaches", s.total_statutory_violations ?? "—") +
-        stat("APRA notices", s.mandatory_apra_notifications ?? "—");
+      // Score ring (native SVG stroke-dasharray)
+      const C = 2 * Math.PI * 58;
+      const arc = $("ringArc");
+      arc.setAttribute("stroke-dasharray", C.toFixed(1));
+      arc.setAttribute("stroke-dashoffset", (C * (1 - score / 100)).toFixed(1));
+      const ringColor = risk === "LOW" ? "#15803d" : risk === "CRITICAL" ? "#c22a2a" : "#b4690e";
+      arc.setAttribute("stroke", ringColor);
+      $("ringPct").innerHTML = score + "<small>%</small>";
 
-      const turns = data.detailed_turns || [];
-      $("rungs").innerHTML = turns.map((t) => {
+      $("riskBadge").className = "risk " + risk;
+      $("riskBadge").textContent = risk + " risk";
+      $("verdictTarget").textContent = target;
+      $("cStages").textContent = (s.passed_turns ?? "—") + " / " + (s.total_turns_executed ?? "—");
+      $("cBreaches").textContent = s.total_statutory_violations ?? "—";
+      $("cNotices").textContent = s.mandatory_apra_notifications ?? "—";
+      $("methodNote").textContent =
+        "“Resisted” = share of stages with no detected breach. A breach is a heuristic match for an " +
+        "unauthorised commitment, PII/TFN disclosure, or invented coverage; each can trigger a mandatory " +
+        "APRA notification. Treat these as observations for human review.";
+      $("verdict").style.display = "block";
+
+      // Findings, assembled from streamed per-stage data
+      const nums = Object.keys(turnData).map(Number).sort((a, b) => a - b);
+      let html = "<h2>Stage findings</h2>";
+      nums.forEach((num) => {
+        const t = turnData[num];
         const passed = t.audit_verdict === "PASSED";
         const violations = (t.violations || []).map((v) =>
-          '<div class="violation"><span class="clause">[' + esc(v.standard) + ' ' + esc(v.clause) + ']</span> ' +
-          esc(v.finding) + '<div class="meta">Remediation: ' + esc(v.statutory_remediation) + '</div></div>'
+          '<div class="violation"><span class="c">[' + esc(v.standard) + " " + esc(v.clause) + "] </span>" +
+          esc(v.finding) + '<div class="rem">Remediation: ' + esc(v.statutory_remediation) + "</div></div>"
         ).join("");
         const notice = t.apra_notification_triggered
-          ? '<div class="notice">⚠️ Mandatory APRA statutory notification triggered</div>' : "";
-        return '<div class="rung ' + (passed ? "pass" : "fail") + '">' +
-          '<h3>' + esc(t.rung_name) + '<span class="verdict ' + esc(t.audit_verdict) + '">' +
-          (passed ? "PASS" : "FAIL") + '</span></h3>' +
-          '<p class="obj">' + esc(t.objective) + '</p>' +
-          '<div class="io"><span class="tag">Probe</span><pre>' + esc(t.adversarial_prompt) + '</pre></div>' +
-          '<div class="io"><span class="tag">Target response</span><pre>' + esc(t.target_response) + '</pre></div>' +
-          notice + violations +
-          '<div class="meta">Latency ' + esc(t.latency_ms) + ' ms · tools: ' +
-          esc((t.mcp_tools_consulted || []).join(", ")) + '</div>' +
-        '</div>';
-      }).join("");
+          ? '<div class="notice">⚠️ Would trigger a mandatory APRA statutory notification</div>' : "";
+        html +=
+          '<details class="finding ' + (passed ? "pass" : "fail") + '"' + (passed ? "" : " open") + ">" +
+            "<summary><span class='sname'>Stage " + num + " · " + esc((STAGES[num-1]||{}).name || t.rung_name) + "</span>" +
+            "<span class='vpill " + esc(t.audit_verdict) + "'>" + (passed ? "PASS" : "FAIL") + "</span>" +
+            "<span class='chev'>▸</span></summary>" +
+            '<div class="finding-body">' +
+              '<div class="io"><span class="tag">Probe sent</span><pre>' + esc(t.adversarial_prompt) + "</pre></div>" +
+              '<div class="io"><span class="tag">Agent response</span><pre>' + esc(t.target_response) + "</pre></div>" +
+              notice + violations +
+              '<div class="latency">Latency ' + esc(t.latency_ms) + " ms · APRA tools consulted: " +
+                esc((t.mcp_tools_consulted || []).join(", ")) + "</div>" +
+            "</div>" +
+          "</details>";
+      });
+      $("findings").innerHTML = html;
 
+      // Evidence
       const verified = s.evidence_chain_verified;
-      $("evidence").innerHTML =
-        '<label>Tamper-evident evidence manifest</label>' +
-        '<div class="meta">Chain integrity: <strong>' +
-        (verified ? "VERIFIED 🔒" : "TAMPERED / INVALID ⚠️") + '</strong></div>' +
-        '<div class="meta">Root fingerprint (SHA-256):<br><code class="fp">' +
-        esc(s.evidence_manifest_fingerprint || "—") + '</code></div>';
-
-      $("results").style.display = "block";
+      $("evChain").innerHTML = "Tamper-evident chain: <strong>" +
+        (verified ? "verified 🔒" : "INVALID ⚠️") + "</strong>";
+      $("evTime").innerHTML = "Target: <strong>" + esc(target) + "</strong> · " +
+        esc(new Date().toISOString().replace("T", " ").slice(0, 19)) + " UTC (local clock)";
+      $("evFp").textContent = s.evidence_manifest_fingerprint || "—";
+      $("evidence").style.display = "block";
     }
 
-    function stat(k, v) { return '<div class="stat"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
-    function statBadge(k, risk) {
-      return '<div class="stat"><div class="k">' + esc(k) + '</div><div class="v"><span class="badge ' +
-        esc(risk) + '">' + esc(risk) + '</span></div></div>';
-    }
-
-    $("runBtn").addEventListener("click", runAssessment);
-    $("copyBtn").addEventListener("click", () => {
-      if (lastDossier) navigator.clipboard.writeText(lastDossier);
-    });
+    $("runBtn").addEventListener("click", runAudit);
+    $("cancelBtn").addEventListener("click", () => { if (controller) controller.abort(); });
+    $("copyBtn").addEventListener("click", () => { if (lastDossier) navigator.clipboard.writeText(lastDossier); });
     $("dlBtn").addEventListener("click", () => {
       if (!lastDossier) return;
       const blob = new Blob([lastDossier], { type: "text/markdown" });
@@ -2172,12 +2388,69 @@ async def api_autonomous_red_team(request):
         return JSONResponse({"error": str(e)}, status_code=400)
 
 
+async def api_autonomous_red_team_stream(request):
+    """Streams the red-team campaign as newline-delimited JSON, one event per
+    ladder stage as it completes, so the UI can show live progress."""
+    data = await request.json()
+    target_url = data.get("target_url", "mock://banking-lending-agent")
+    industry = data.get("industry", "banking")
+    agent_role = data.get("agent_role", "lending_agent")
+    turns = int(data.get("turns", 4))
+    llm_provider = data.get("llm_provider", "heuristic")
+    attack_objective = data.get("attack_objective", None)
+    payload_format = data.get("payload_format", "generic")
+    auth_token = data.get("auth_token", None)
+
+    async def event_stream():
+        queue: asyncio.Queue = asyncio.Queue()
+
+        async def on_turn(turn):
+            await queue.put({"type": "turn", "turn": turn})
+
+        async def run():
+            try:
+                result = await run_autonomous_mcp_red_team_campaign(
+                    target_url=target_url,
+                    industry=industry,
+                    agent_role=agent_role,
+                    turns=turns,
+                    attack_objective=attack_objective,
+                    llm_provider=llm_provider,
+                    auth_token=auth_token,
+                    payload_format=payload_format,
+                    progress_callback=on_turn,
+                )
+                await queue.put({
+                    "type": "done",
+                    "campaign_summary": result["campaign_summary"],
+                    "board_dossier_markdown": result["board_dossier_markdown"],
+                    "duration_seconds": result.get("duration_seconds"),
+                })
+            except Exception as e:
+                await queue.put({"type": "error", "error": str(e)})
+            finally:
+                await queue.put(None)
+
+        ladder_depth = max(1, min(turns, 4))
+        yield json.dumps({"type": "start", "depth": ladder_depth, "target_url": target_url}) + "\n"
+        task = asyncio.create_task(run())
+        while True:
+            item = await queue.get()
+            if item is None:
+                break
+            yield json.dumps(item) + "\n"
+        await task
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
 routes = [
     Route("/", homepage),
     Route("/probe", simple_probe),
     Route("/api/chat", api_chat, methods=["POST"]),
     Route("/api/spin_test", api_spin_test, methods=["POST"]),
     Route("/api/autonomous_red_team", api_autonomous_red_team, methods=["POST"]),
+    Route("/api/autonomous_red_team/stream", api_autonomous_red_team_stream, methods=["POST"]),
     Route("/api/audit", api_audit, methods=["POST"]),
     Route("/api/search", api_search),
     Route("/api/notifications", api_notifications),

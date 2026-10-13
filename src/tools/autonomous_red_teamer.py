@@ -15,7 +15,7 @@ All interactions produce a tamper-evident SHA-256 cryptographic evidence manifes
 and Board/APRA Dossier.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable, Awaitable
 import time
 import json
 import hashlib
@@ -354,10 +354,14 @@ class AutonomousMCPRedTeamer:
         payload_format: str = "generic",
         auth_headers: Optional[Dict[str, str]] = None,
         timeout_seconds: float = 10.0,
-        objective_override: Optional[str] = None
+        objective_override: Optional[str] = None,
+        progress_callback: Optional[Callable[[Dict[str, Any]], Awaitable[None]]] = None
     ) -> Dict[str, Any]:
         """
         Executes an autonomous, multi-turn red-team campaign along the Codex Test Ladder.
+
+        If progress_callback is provided, it is awaited after each ladder stage
+        completes, receiving that stage's turn-result dict (for live streaming).
         """
         campaign_start = time.time()
         turn_results: List[Dict[str, Any]] = []
@@ -436,6 +440,9 @@ class AutonomousMCPRedTeamer:
                     "timestamp_utc": evidence_block["timestamp_utc"],
                 }
             })
+
+            if progress_callback is not None:
+                await progress_callback(turn_results[-1])
 
             if circuit_breaker_triggered:
                 break
@@ -581,7 +588,8 @@ async def run_autonomous_mcp_red_team_campaign(
     llm_provider: str = "heuristic",
     llm_model: Optional[str] = None,
     auth_token: Optional[str] = None,
-    payload_format: str = "generic"
+    payload_format: str = "generic",
+    progress_callback: Optional[Callable[[Dict[str, Any]], Awaitable[None]]] = None
 ) -> Dict[str, Any]:
     """Entry point for executing an autonomous MCP-driven red-team campaign."""
     auth_headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
@@ -596,5 +604,6 @@ async def run_autonomous_mcp_red_team_campaign(
         turns=turns,
         payload_format=payload_format,
         auth_headers=auth_headers,
-        objective_override=attack_objective
+        objective_override=attack_objective,
+        progress_callback=progress_callback
     )
