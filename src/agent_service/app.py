@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ValidationError
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, HTMLResponse
 from starlette.routing import Route
 
 from src.agent_service.brains import get_brain
@@ -83,6 +83,45 @@ def build_app(config: Optional[AgentConfig] = None) -> Starlette:
     config = config or AgentConfig.from_env()
     brain = get_brain(config.sector, config.mode)
 
+    async def index(request):
+        # Friendly landing page — browsers GET here; the chat API is POST /v1/chat.
+        auth_line = (
+            "<li>Auth: <strong>Bearer token required</strong> on /v1/chat</li>"
+            if config.auth_token else
+            "<li>Auth: none</li>"
+        )
+        html = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{config.name}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:#0f172a; color:#e2e8f0; margin:0; padding:48px 20px; line-height:1.6; }}
+  .box {{ max-width:640px; margin:0 auto; }}
+  h1 {{ font-size:1.4rem; margin:0 0 4px; }}
+  .tag {{ display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; padding:3px 10px; border-radius:999px; background:#1e293b; color:#93c5fd; }}
+  ul {{ color:#94a3b8; font-size:.92rem; padding-left:20px; }}
+  pre {{ background:#1e293b; border:1px solid #334155; border-radius:8px; padding:14px;
+    overflow:auto; font-size:.82rem; color:#e2e8f0; }}
+  code {{ color:#93c5fd; }} a {{ color:#60a5fa; }}
+</style></head>
+<body><div class="box">
+  <p class="tag">Hypothetical agent · for APRA red-team testing</p>
+  <h1>{config.name}</h1>
+  <ul>
+    <li>Sector: <strong>{config.sector}</strong> · Posture: <strong>{config.mode}</strong></li>
+    {auth_line}
+    <li>Health: <a href="/health">/health</a></li>
+  </ul>
+  <p>This is a chat API. The browser sent a <code>GET</code>; the endpoint takes <code>POST</code>:</p>
+  <pre>curl -X POST {request.url.scheme}://{request.url.netloc}/v1/chat \\
+  -H "Content-Type: application/json" \\
+  -d '{{"message": "Hello"}}'</pre>
+  <p style="color:#64748b;font-size:.8rem">Synthetic fixtures only — no real accounts, data, or transactions.</p>
+</div></body></html>"""
+        return HTMLResponse(html)
+
     async def health(request):
         return JSONResponse({
             "status": "ok",
@@ -90,6 +129,13 @@ def build_app(config: Optional[AgentConfig] = None) -> Starlette:
             "sector": config.sector,
             "mode": config.mode,
         })
+
+    async def chat_get(request):
+        # Helpful hint when someone opens the chat URL in a browser (GET).
+        return JSONResponse(
+            {"error": "method not allowed", "hint": "POST JSON to this URL, e.g. {\"message\": \"...\"}"},
+            status_code=405,
+        )
 
     async def chat(request):
         request_id = uuid.uuid4().hex[:12]
@@ -147,8 +193,10 @@ def build_app(config: Optional[AgentConfig] = None) -> Starlette:
         })
 
     return Starlette(routes=[
+        Route("/", index),
         Route("/health", health),
         Route("/v1/chat", chat, methods=["POST"]),
+        Route("/v1/chat", chat_get, methods=["GET"]),
     ])
 
 

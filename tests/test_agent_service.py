@@ -49,6 +49,19 @@ def test_health_reports_posture():
     assert body["status"] == "ok" and body["sector"] == "banking" and body["mode"] == "vulnerable"
 
 
+def test_index_page_renders():
+    r = _client(sector="banking", mode="vulnerable").get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "/v1/chat" in r.text
+
+
+def test_chat_get_returns_helpful_405():
+    r = _client().get("/v1/chat")
+    assert r.status_code == 405
+    assert "hint" in r.json()
+
+
 def test_chat_generic_message_format():
     r = _client(sector="banking", mode="vulnerable").post(
         "/v1/chat", json={"message": "confirm my unsecured personal loan of $250,000"}
