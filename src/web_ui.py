@@ -2245,6 +2245,198 @@ async def simple_probe(request):
     return HTMLResponse(SIMPLE_PROBE_HTML)
 
 
+CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --bg:#f4f6f9; --surface:#fff; --panel:#eef1f6; --line:#dde3ec;
+    --ink:#15202e; --muted:#566273; --dim:#8390a1; --accent:#2458e6;
+    --good:#2f9e44; --good-bg:#e7f6ec; --warn:#bd7710; --warn-bg:#fbf0dd;
+    --crit:#cf3b3b; --crit-bg:#fdecec; --info:#2563eb; --info-bg:#e7eefc;
+    --body:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+    --bg:#0b0e14; --surface:#131926; --panel:#1a2130; --line:#283040;
+    --ink:#e7eaf1; --muted:#9ba6b7; --dim:#6b7585; --accent:#89a3ff;
+    --good:#50c568; --good-bg:#15291c; --warn:#e0a53a; --warn-bg:#2b2213;
+    --crit:#f06a6a; --crit-bg:#2c1717; --info:#89a3ff; --info-bg:#161f30;
+    color-scheme:dark; } }
+  :root[data-theme="dark"]{
+    --bg:#0b0e14; --surface:#131926; --panel:#1a2130; --line:#283040;
+    --ink:#e7eaf1; --muted:#9ba6b7; --dim:#6b7585; --accent:#89a3ff;
+    --good:#50c568; --good-bg:#15291c; --warn:#e0a53a; --warn-bg:#2b2213;
+    --crit:#f06a6a; --crit-bg:#2c1717; --info:#89a3ff; --info-bg:#161f30;
+    color-scheme:dark; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.55;}
+  .wrap{max-width:60rem;margin:0 auto;padding-inline:18px;padding-block:36px 72px;}
+  h1{font-size:1.5rem;margin:0 0 6px;}
+  .lede{color:var(--muted);margin:0 0 22px;max-width:60ch;font-size:.98rem;}
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;}
+  .picker{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .fx{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:10px 14px;font:inherit;font-size:.9rem;cursor:pointer;}
+  .fx:hover{border-color:var(--accent);}
+  .fx.active{border-color:var(--accent);background:var(--accent);color:#fff;}
+  .status{font-size:.86rem;color:var(--muted);min-height:1.1em;margin:12px 0;}
+  .status.err{color:var(--crit);font-weight:600;}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:720px){ .split{grid-template-columns:1fr;} }
+  .pane{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:18px;min-width:0;}
+  .pane h2{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:0 0 4px;font-family:var(--mono);}
+  .pane .sub{font-size:.85rem;color:var(--muted);margin:0 0 14px;}
+  .verdict{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .big{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums;}
+  .rate{font-size:.74rem;font-weight:700;letter-spacing:.03em;padding:3px 10px;border-radius:999px;color:#fff;}
+  .rate.LOW,.rate.SOUND{background:var(--good);}
+  .rate.HIGH{background:var(--warn);}
+  .rate.CRITICAL{background:var(--crit);}
+  .rate.INDETERMINATE{background:var(--dim);}
+  .counts{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-bottom:6px;}
+  .stage{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.86rem;}
+  .stage:last-child{border-bottom:none;}
+  .v{font-weight:700;font-size:.74rem;padding:1px 8px;border-radius:5px;}
+  .v.PASSED{background:var(--good-bg);color:var(--good);} .v.FAILED{background:var(--crit-bg);color:var(--crit);}
+  .finding{border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:10px;}
+  .finding .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px;}
+  .badge{font-size:.68rem;font-weight:700;letter-spacing:.02em;padding:2px 8px;border-radius:5px;white-space:nowrap;}
+  .badge.EXPOSURE{background:var(--crit-bg);color:var(--crit);}
+  .badge.CONTROL_MISSING{background:var(--warn-bg);color:var(--warn);}
+  .badge.CONTROL_VERIFIED{background:var(--good-bg);color:var(--good);}
+  .badge.CONTROL_INDICATOR{background:var(--panel);color:var(--dim);}
+  .badge.UNVERIFIABLE_LOCALLY{background:var(--info-bg);color:var(--info);}
+  .clause{font-family:var(--mono);font-size:.72rem;color:var(--accent);}
+  .finding .title{font-weight:600;font-size:.9rem;}
+  .finding .detail{font-size:.84rem;color:var(--muted);margin-top:3px;}
+  .ev{font-family:var(--mono);font-size:.75rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin-top:7px;overflow-x:auto;white-space:nowrap;color:var(--ink);}
+  .ev .loc{color:var(--accent);}
+  .delta{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:9px;padding:14px 16px;margin:16px 0;font-size:.9rem;}
+  .delta b{color:var(--ink);}
+  footer{margin-top:26px;color:var(--dim);font-size:.8rem;text-align:center;}
+  footer a{color:var(--accent);}
+</style>
+<div class="wrap">
+  <p class="eyebrow">APRA CPS 230 · CPS 234 · embedded analysis</p>
+  <h1>Embedded Code Analysis</h1>
+  <p class="lede">A notch beyond the black-box probe. Instead of judging what an agent <em>says</em> over HTTP, this reads the agent's actual source and verifies which controls are wired in, with file:line evidence.</p>
+
+  <div class="picker" id="picker">
+    <button class="fx active" data-fx="wild-banking">Unhardened banking bot</button>
+    <button class="fx" data-fx="hardened-banking">Hardened banking bot</button>
+    <button class="fx" data-fx="runtime-guardrail">Runtime guardrail (in-band)</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <div class="delta" id="delta" hidden></div>
+
+  <div class="split">
+    <div class="pane">
+      <h2>Black-box probe — what it says</h2>
+      <p class="sub">Observes HTTP responses only.</p>
+      <div id="blackbox"></div>
+    </div>
+    <div class="pane">
+      <h2>Code-aware — what the code does</h2>
+      <p class="sub" id="codesub">Reads the source.</p>
+      <div id="code"></div>
+    </div>
+  </div>
+
+  <footer>
+    Static inspection shows control relevance, not operational effectiveness or a compliance verdict. · <a href="/probe">Black-box probe</a> · <a href="/">Full studio</a>
+  </footer>
+</div>
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  function run(fx){
+    var st = $("status");
+    st.className = "status"; st.textContent = "Analysing " + fx + " …";
+    $("delta").hidden = true; $("blackbox").innerHTML = ""; $("code").innerHTML = "";
+    fetch("/api/code_audit", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({fixture:fx})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d.error){ throw new Error(d.error); }
+        render(d); st.textContent = "";
+      })
+      .catch(function(e){ st.className="status err"; st.textContent = "Error: " + e.message; });
+  }
+
+  function render(d){
+    var code = d.code, c = code.summary, t = code.target;
+    $("codesub").textContent = t.file + (t.scope ? "  (" + t.scope + ")" : "");
+
+    // black-box pane
+    if(d.blackbox){
+      var s = d.blackbox.summary;
+      var stages = d.blackbox.turns.map(function(x){
+        var p = x.verdict === "PASSED";
+        return '<div class="stage"><span>'+esc(x.rung)+'</span><span class="v '+esc(x.verdict)+'">'+(p?"PASS":"FAIL")+'</span></div>';
+      }).join("");
+      $("blackbox").innerHTML =
+        '<div class="verdict"><span class="big">'+esc(s.compliance_score_percentage)+'%</span>'+
+        '<span class="rate '+esc(s.board_risk_rating)+'">'+esc(s.board_risk_rating)+' risk</span></div>'+
+        '<div class="counts"><span>'+esc(s.passed_turns)+'/'+esc(s.total_turns_executed)+' passed</span>'+
+        '<span>'+esc(s.total_statutory_violations)+' breaches</span></div>'+stages;
+    } else {
+      $("blackbox").innerHTML = '<p class="sub">No HTTP endpoint for this target — code-aware only.</p>';
+    }
+
+    // code pane
+    var findings = code.findings.filter(function(f){ return f.status !== "CONTROL_INDICATOR" || f.severity === "info"; });
+    var html =
+      '<div class="verdict"><span class="rate '+esc(code.code_posture)+'">'+esc(code.code_posture)+'</span></div>'+
+      '<div class="counts"><span>'+esc(c.exposures)+' exposures</span>'+
+      '<span>'+esc(c.controls_verified)+' verified</span>'+
+      '<span>'+esc(c.controls_missing)+' missing</span></div>';
+    html += code.findings.map(function(f){
+      if(f.severity === "info" && f.status === "CONTROL_INDICATOR" && f.id !== "capability_surface") return "";
+      var ev = (f.evidence||[]).map(function(e){
+        return '<div class="ev"><span class="loc">'+esc(e.file)+':'+esc(e.line)+'</span>  '+esc(e.snippet||"")+'</div>';
+      }).join("");
+      return '<div class="finding"><div class="top"><span class="badge '+esc(f.status)+'">'+esc(f.status.replace(/_/g," "))+'</span>'+
+        '<span class="clause">'+esc(f.standard)+' '+esc(f.clause)+'</span></div>'+
+        '<div class="title">'+esc(f.title)+'</div>'+
+        '<div class="detail">'+esc(f.detail)+'</div>'+ev+'</div>';
+    }).join("");
+    $("code").innerHTML = html;
+
+    // delta callout
+    var dl = $("delta");
+    if(d.blackbox){
+      var bbRisk = d.blackbox.summary.board_risk_rating;
+      dl.innerHTML = '<b>Black-box:</b> ' + esc(bbRisk) + ' risk · <b>Code-aware:</b> ' + esc(code.code_posture) +
+        '. ' + deltaNote(code.code_posture, bbRisk, c);
+    } else {
+      dl.innerHTML = '<b>Code-aware verdict:</b> ' + esc(code.code_posture) + '. ' + deltaNote(code.code_posture, null, c);
+    }
+    dl.hidden = false;
+  }
+
+  function deltaNote(posture, bbRisk, c){
+    if(c.exposures) return "The source contains hardcoded exposures a probe only catches if it triggers that branch.";
+    if(posture === "INDETERMINATE" && bbRisk === "LOW")
+      return "The probe gives it a clean pass, but the code shows its controls are refusal text with no verifiable enforcement or audit logging.";
+    if(posture === "SOUND") return "The control path is verifiably wired in the source.";
+    return "Code-aware analysis adds evidence the black-box probe cannot see.";
+  }
+
+  var buttons = document.querySelectorAll(".fx");
+  buttons.forEach(function(b){ b.addEventListener("click", function(){
+    buttons.forEach(function(x){ x.classList.remove("active"); });
+    b.classList.add("active"); run(b.dataset.fx);
+  }); });
+  run("wild-banking");
+</script>
+"""
+
+
+async def inspect_page(request):
+    return HTMLResponse(CODE_INSPECT_HTML)
+
+
 async def api_chat(request):
     data = await request.json()
     mode = data.get("mode", "without_mcp")
@@ -2388,6 +2580,36 @@ async def api_autonomous_red_team(request):
         return JSONResponse({"error": str(e)}, status_code=400)
 
 
+async def api_code_audit(request):
+    """Code-aware analysis of a built-in fixture, plus the black-box verdict for the
+    same agent so the UI can show the delta between what it says and what its code does."""
+    from src.code_auditor.analyzer import analyze_fixture, FIXTURES as CODE_FIXTURES
+    data = await request.json()
+    fixture = data.get("fixture", "wild-banking")
+    try:
+        code = analyze_fixture(fixture)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    result = {"code": code}
+    mock = code["target"].get("blackbox_mock")
+    if mock:
+        try:
+            bb = await run_autonomous_mcp_red_team_campaign(
+                target_url=mock,
+                industry=CODE_FIXTURES[fixture]["industry"],
+                agent_role="lending_agent",
+                turns=4,
+            )
+            result["blackbox"] = {
+                "summary": bb["campaign_summary"],
+                "turns": [{"rung": t["rung_name"], "verdict": t["audit_verdict"]} for t in bb["detailed_turns"]],
+            }
+        except Exception as e:
+            result["blackbox_error"] = str(e)
+    return JSONResponse(result)
+
+
 async def api_autonomous_red_team_stream(request):
     """Streams the red-team campaign as newline-delimited JSON, one event per
     ladder stage as it completes, so the UI can show live progress."""
@@ -2447,7 +2669,9 @@ async def api_autonomous_red_team_stream(request):
 routes = [
     Route("/", homepage),
     Route("/probe", simple_probe),
+    Route("/inspect", inspect_page),
     Route("/api/chat", api_chat, methods=["POST"]),
+    Route("/api/code_audit", api_code_audit, methods=["POST"]),
     Route("/api/spin_test", api_spin_test, methods=["POST"]),
     Route("/api/autonomous_red_team", api_autonomous_red_team, methods=["POST"]),
     Route("/api/autonomous_red_team/stream", api_autonomous_red_team_stream, methods=["POST"]),

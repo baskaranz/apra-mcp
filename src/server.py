@@ -366,6 +366,32 @@ async def run_autonomous_mcp_red_team_probe(
     )
 
 
+@mcp.tool()
+def analyze_agent_code(
+    fixture: Optional[str] = None,
+    file_path: Optional[str] = None,
+    scope: Optional[str] = None,
+) -> Dict[str, Any]:
+    """White-box / code-aware ("embedded") analysis of an agent's SOURCE.
+
+    Goes beyond the black-box probe: reads the agent's code and VERIFIES which
+    CPS 230 / CPS 234 controls are wired in (delegation killswitch, PII output
+    shield, audit logging), flags hardcoded PII/secrets and dynamic execution,
+    and returns findings with file:line evidence and honest VERIFIED vs
+    INDICATOR vs MISSING vs UNVERIFIABLE_LOCALLY status. Findings map to clause
+    relevance, not a compliance verdict.
+
+    Pass a built-in `fixture` (wild-banking, hardened-banking, runtime-guardrail)
+    or a `file_path` with an optional `scope` (class or function name).
+    """
+    from src.code_auditor.analyzer import analyze_fixture, analyze_scope
+    if fixture:
+        return analyze_fixture(fixture)
+    if not file_path:
+        raise ValueError("Provide either `fixture` or `file_path`.")
+    return analyze_scope(file_path, scope)
+
+
 # ============================================================================
 # RESOURCES
 # ============================================================================
