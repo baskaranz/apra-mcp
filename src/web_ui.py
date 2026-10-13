@@ -2270,31 +2270,33 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
     --crit:#f06a6a; --crit-bg:#2c1717; --info:#89a3ff; --info-bg:#161f30;
     color-scheme:dark; }
   *{box-sizing:border-box;}
+  [hidden]{display:none!important;}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.55;}
-  .wrap{max-width:60rem;margin:0 auto;padding-inline:18px;padding-block:36px 72px;}
+  .wrap{max-width:46rem;margin:0 auto;padding-inline:18px;padding-block:36px 80px;}
   h1{font-size:1.5rem;margin:0 0 6px;}
   .lede{color:var(--muted);margin:0 0 22px;max-width:60ch;font-size:.98rem;}
   .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;}
-  .picker{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .picker{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
   .fx{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:10px 14px;font:inherit;font-size:.9rem;cursor:pointer;}
   .fx:hover{border-color:var(--accent);}
   .fx.active{border-color:var(--accent);background:var(--accent);color:#fff;}
   .status{font-size:.86rem;color:var(--muted);min-height:1.1em;margin:12px 0;}
   .status.err{color:var(--crit);font-weight:600;}
-  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  @media (max-width:720px){ .split{grid-template-columns:1fr;} }
+  .act{margin-top:16px;}
+  .steplabel{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;}
+  .steplabel .n{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:.72rem;}
   .pane{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:18px;min-width:0;}
-  .pane h2{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:0 0 4px;font-family:var(--mono);}
-  .pane .sub{font-size:.85rem;color:var(--muted);margin:0 0 14px;}
+  .pane .what{font-size:.85rem;color:var(--muted);margin:0 0 14px;}
+  .pane .src{font-family:var(--mono);font-size:.78rem;color:var(--muted);margin:0 0 14px;word-break:break-all;}
   .verdict{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
-  .big{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums;}
+  .big{font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums;}
   .rate{font-size:.74rem;font-weight:700;letter-spacing:.03em;padding:3px 10px;border-radius:999px;color:#fff;}
   .rate.LOW,.rate.SOUND{background:var(--good);}
   .rate.HIGH{background:var(--warn);}
   .rate.CRITICAL{background:var(--crit);}
   .rate.INDETERMINATE{background:var(--dim);}
-  .counts{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-bottom:6px;}
-  .stage{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.86rem;}
+  .counts{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-bottom:8px;}
+  .stage{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem;}
   .stage:last-child{border-bottom:none;}
   .v{font-weight:700;font-size:.74rem;padding:1px 8px;border-radius:5px;}
   .v.PASSED{background:var(--good-bg);color:var(--good);} .v.FAILED{background:var(--crit-bg);color:var(--crit);}
@@ -2311,15 +2313,17 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
   .finding .detail{font-size:.84rem;color:var(--muted);margin-top:3px;}
   .ev{font-family:var(--mono);font-size:.75rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin-top:7px;overflow-x:auto;white-space:nowrap;color:var(--ink);}
   .ev .loc{color:var(--accent);}
-  .delta{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:9px;padding:14px 16px;margin:16px 0;font-size:.9rem;}
+  .reveal{display:block;width:100%;margin-top:18px;padding:14px;border:1px dashed var(--accent);background:var(--panel);color:var(--accent);border-radius:11px;font:inherit;font-size:.95rem;font-weight:600;cursor:pointer;}
+  .reveal:hover{background:var(--accent);color:#fff;}
+  .delta{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:9px;padding:14px 16px;margin-bottom:16px;font-size:.9rem;}
   .delta b{color:var(--ink);}
   footer{margin-top:26px;color:var(--dim);font-size:.8rem;text-align:center;}
   footer a{color:var(--accent);}
 </style>
 <div class="wrap">
   <p class="eyebrow">APRA CPS 230 · CPS 234 · embedded analysis</p>
-  <h1>Embedded Code Analysis</h1>
-  <p class="lede">A notch beyond the black-box probe. Instead of judging what an agent <em>says</em> over HTTP, this reads the agent's actual source and verifies which controls are wired in, with file:line evidence.</p>
+  <h1>Black-box, then inside the code</h1>
+  <p class="lede">First see what a black-box probe concludes from the agent's HTTP responses. Then reveal what reading the agent's actual source shows, with file:line evidence.</p>
 
   <div class="picker" id="picker">
     <button class="fx active" data-fx="wild-banking">Unhardened banking bot</button>
@@ -2328,17 +2332,20 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
   </div>
   <div class="status" id="status"></div>
 
-  <div class="delta" id="delta" hidden></div>
-
-  <div class="split">
+  <div class="act" id="act1" hidden>
+    <div class="steplabel"><span class="n">1</span>Black-box probe — what it says</div>
     <div class="pane">
-      <h2>Black-box probe — what it says</h2>
-      <p class="sub">Observes HTTP responses only.</p>
+      <p class="what">Observes the agent's HTTP responses only.</p>
       <div id="blackbox"></div>
     </div>
+    <button class="reveal" id="revealBtn" hidden>Reveal embedded code analysis ↓</button>
+  </div>
+
+  <div class="act" id="act2" hidden>
+    <div class="steplabel"><span class="n">2</span>Embedded code analysis — what the code does</div>
+    <div class="delta" id="delta"></div>
     <div class="pane">
-      <h2>Code-aware — what the code does</h2>
-      <p class="sub" id="codesub">Reads the source.</p>
+      <p class="src" id="codesrc"></p>
       <div id="code"></div>
     </div>
   </div>
@@ -2350,25 +2357,26 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
 <script>
   var $ = function(id){ return document.getElementById(id); };
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  var current = "wild-banking";
 
-  function run(fx){
-    var st = $("status");
-    st.className = "status"; st.textContent = "Analysing " + fx + " …";
-    $("delta").hidden = true; $("blackbox").innerHTML = ""; $("code").innerHTML = "";
-    fetch("/api/code_audit", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({fixture:fx})})
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if(d.error){ throw new Error(d.error); }
-        render(d); st.textContent = "";
-      })
-      .catch(function(e){ st.className="status err"; st.textContent = "Error: " + e.message; });
+  function post(body){
+    return fetch("/api/code_audit", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}).then(function(r){ return r.json(); });
   }
 
-  function render(d){
-    var code = d.code, c = code.summary, t = code.target;
-    $("codesub").textContent = t.file + (t.scope ? "  (" + t.scope + ")" : "");
+  function selectFixture(fx){
+    current = fx;
+    var st = $("status"); st.className = "status"; st.textContent = "Running black-box probe against " + fx + " …";
+    $("act1").hidden = true; $("act2").hidden = true; $("revealBtn").hidden = true;
+    post({fixture:fx, phase:"blackbox"}).then(function(d){
+      if(d.error){ throw new Error(d.error); }
+      renderBlackbox(d);
+      $("act1").hidden = false;
+      $("revealBtn").hidden = false;
+      st.textContent = "";
+    }).catch(function(e){ st.className="status err"; st.textContent = "Error: " + e.message; });
+  }
 
-    // black-box pane
+  function renderBlackbox(d){
     if(d.blackbox){
       var s = d.blackbox.summary;
       var stages = d.blackbox.turns.map(function(x){
@@ -2378,14 +2386,32 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
       $("blackbox").innerHTML =
         '<div class="verdict"><span class="big">'+esc(s.compliance_score_percentage)+'%</span>'+
         '<span class="rate '+esc(s.board_risk_rating)+'">'+esc(s.board_risk_rating)+' risk</span></div>'+
-        '<div class="counts"><span>'+esc(s.passed_turns)+'/'+esc(s.total_turns_executed)+' passed</span>'+
+        '<div class="counts"><span>'+esc(s.passed_turns)+'/'+esc(s.total_turns_executed)+' stages passed</span>'+
         '<span>'+esc(s.total_statutory_violations)+' breaches</span></div>'+stages;
+      $("revealBtn").textContent = "Reveal embedded code analysis ↓";
     } else {
-      $("blackbox").innerHTML = '<p class="sub">No HTTP endpoint for this target — code-aware only.</p>';
+      $("blackbox").innerHTML = '<p class="what">This control lives in code — there is no standalone HTTP endpoint to probe. Reveal the embedded analysis to see it.</p>';
+      $("revealBtn").textContent = "Show embedded code analysis ↓";
     }
+  }
 
-    // code pane
-    var findings = code.findings.filter(function(f){ return f.status !== "CONTROL_INDICATOR" || f.severity === "info"; });
+  function revealCode(){
+    var st = $("status"); st.className = "status"; st.textContent = "Reading the agent's source …";
+    post({fixture:current, phase:"code"}).then(function(d){
+      if(d.error){ throw new Error(d.error); }
+      renderCode(d.code, lastBlackboxRisk);
+      $("revealBtn").hidden = true;
+      $("act2").hidden = false;
+      st.textContent = "";
+      $("act2").scrollIntoView({behavior:"smooth", block:"start"});
+    }).catch(function(e){ st.className="status err"; st.textContent = "Error: " + e.message; });
+  }
+
+  var lastBlackboxRisk = null;
+
+  function renderCode(code, bbRisk){
+    var c = code.summary, t = code.target;
+    $("codesrc").textContent = t.file + (t.scope ? "  (scope: " + t.scope + ")" : "");
     var html =
       '<div class="verdict"><span class="rate '+esc(code.code_posture)+'">'+esc(code.code_posture)+'</span></div>'+
       '<div class="counts"><span>'+esc(c.exposures)+' exposures</span>'+
@@ -2403,32 +2429,25 @@ CODE_INSPECT_HTML = r"""<title>Embedded Code Analysis</title>
     }).join("");
     $("code").innerHTML = html;
 
-    // delta callout
-    var dl = $("delta");
-    if(d.blackbox){
-      var bbRisk = d.blackbox.summary.board_risk_rating;
-      dl.innerHTML = '<b>Black-box:</b> ' + esc(bbRisk) + ' risk · <b>Code-aware:</b> ' + esc(code.code_posture) +
-        '. ' + deltaNote(code.code_posture, bbRisk, c);
-    } else {
-      dl.innerHTML = '<b>Code-aware verdict:</b> ' + esc(code.code_posture) + '. ' + deltaNote(code.code_posture, null, c);
-    }
-    dl.hidden = false;
+    var note;
+    if(c.exposures) note = "The source contains hardcoded exposures a probe only catches if it happens to trigger that branch.";
+    else if(code.code_posture === "INDETERMINATE" && bbRisk === "LOW") note = "The probe gives it a clean pass, but the code shows its controls are refusal text with no verifiable enforcement or audit logging.";
+    else if(code.code_posture === "SOUND") note = "The control path is verifiably wired in the source.";
+    else note = "Code-aware analysis adds evidence the black-box probe cannot see.";
+    $("delta").innerHTML = (bbRisk ? '<b>Black-box said:</b> ' + esc(bbRisk) + ' risk. ' : '') + '<b>Code-aware:</b> ' + esc(code.code_posture) + '. ' + note;
   }
 
-  function deltaNote(posture, bbRisk, c){
-    if(c.exposures) return "The source contains hardcoded exposures a probe only catches if it triggers that branch.";
-    if(posture === "INDETERMINATE" && bbRisk === "LOW")
-      return "The probe gives it a clean pass, but the code shows its controls are refusal text with no verifiable enforcement or audit logging.";
-    if(posture === "SOUND") return "The control path is verifiably wired in the source.";
-    return "Code-aware analysis adds evidence the black-box probe cannot see.";
-  }
+  // keep last black-box risk for the delta
+  var _origRenderBlackbox = renderBlackbox;
+  renderBlackbox = function(d){ lastBlackboxRisk = d.blackbox ? d.blackbox.summary.board_risk_rating : null; _origRenderBlackbox(d); };
 
   var buttons = document.querySelectorAll(".fx");
   buttons.forEach(function(b){ b.addEventListener("click", function(){
     buttons.forEach(function(x){ x.classList.remove("active"); });
-    b.classList.add("active"); run(b.dataset.fx);
+    b.classList.add("active"); selectFixture(b.dataset.fx);
   }); });
-  run("wild-banking");
+  $("revealBtn").addEventListener("click", revealCode);
+  selectFixture("wild-banking");
 </script>
 """
 
@@ -2581,32 +2600,45 @@ async def api_autonomous_red_team(request):
 
 
 async def api_code_audit(request):
-    """Code-aware analysis of a built-in fixture, plus the black-box verdict for the
-    same agent so the UI can show the delta between what it says and what its code does."""
+    """Two-phase assurance for a built-in fixture so the UI can show the black-box
+    assessment first and then reveal the white-box (code-aware) assessment.
+
+    phase: "blackbox" (HTTP probe only), "code" (source analysis only), or
+    "both" (default; used by the MCP/programmatic path)."""
     from src.code_auditor.analyzer import analyze_fixture, FIXTURES as CODE_FIXTURES
     data = await request.json()
     fixture = data.get("fixture", "wild-banking")
-    try:
-        code = analyze_fixture(fixture)
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+    phase = data.get("phase", "both")
+    if fixture not in CODE_FIXTURES:
+        return JSONResponse({"error": f"Unknown fixture '{fixture}'"}, status_code=400)
 
-    result = {"code": code}
-    mock = code["target"].get("blackbox_mock")
-    if mock:
+    result = {}
+
+    if phase in ("blackbox", "both"):
+        mock = CODE_FIXTURES[fixture].get("blackbox_mock")
+        if mock:
+            try:
+                bb = await run_autonomous_mcp_red_team_campaign(
+                    target_url=mock,
+                    industry=CODE_FIXTURES[fixture]["industry"],
+                    agent_role="lending_agent",
+                    turns=4,
+                )
+                result["blackbox"] = {
+                    "summary": bb["campaign_summary"],
+                    "turns": [{"rung": t["rung_name"], "verdict": t["audit_verdict"]} for t in bb["detailed_turns"]],
+                }
+            except Exception as e:
+                result["blackbox_error"] = str(e)
+        else:
+            result["blackbox"] = None  # no HTTP endpoint for this target
+
+    if phase in ("code", "both"):
         try:
-            bb = await run_autonomous_mcp_red_team_campaign(
-                target_url=mock,
-                industry=CODE_FIXTURES[fixture]["industry"],
-                agent_role="lending_agent",
-                turns=4,
-            )
-            result["blackbox"] = {
-                "summary": bb["campaign_summary"],
-                "turns": [{"rung": t["rung_name"], "verdict": t["audit_verdict"]} for t in bb["detailed_turns"]],
-            }
+            result["code"] = analyze_fixture(fixture)
         except Exception as e:
-            result["blackbox_error"] = str(e)
+            return JSONResponse({"error": str(e)}, status_code=400)
+
     return JSONResponse(result)
 
 
