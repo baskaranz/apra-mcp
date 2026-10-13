@@ -1796,30 +1796,65 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     .et-node.done .et-ico { background: var(--pass-bg); color: var(--pass); border-color: #b6e3c3; }
     @media (prefers-reduced-motion: reduce) { .et-node { transition: none; } }
 
-    /* Request trace comparison */
-    .trace-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    /* Request trace — shared trunk that forks at the guardrail */
+    .trace-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: var(--shadow); }
     .trace-card h2 { font-size: 1.05rem; margin: 0 0 4px; }
-    .trace-note { color: var(--muted); font-size: .84rem; margin: 0 0 16px; }
-    .trace-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-    .trace-path { border: 1px solid var(--border); border-radius: 11px; padding: 14px; min-width: 0; background: #fff; }
-    .trace-path.vuln { border-top: 4px solid var(--fail); }
-    .trace-path.guarded { border-top: 4px solid var(--pass); }
-    .trace-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
-    .trace-head strong { font-size: .9rem; }
-    .trace-port { font: 700 .75rem ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
-    .trace-flow { display: flex; align-items: stretch; gap: 6px; }
-    .trace-node { flex: 1; min-width: 0; display: grid; place-items: center; text-align: center; padding: 9px 6px; border: 1px solid var(--border); border-radius: 8px; background: #f7f8fa; font-size: .75rem; line-height: 1.3; }
-    .trace-node.guard { background: var(--pass-bg); border-color: #b6e3c3; color: var(--pass); font-weight: 650; }
-    .trace-node.exposed { background: var(--fail-bg); border-color: #f3c2c2; color: var(--fail); font-weight: 650; }
-    .trace-node small { display: block; margin-top: 4px; font: .68rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
-    .trace-node.guard small { color: var(--pass); }
-    .trace-node.exposed small { color: var(--fail); }
-    .trace-arrow { align-self: center; color: var(--faint); font-weight: 700; }
-    .trace-result { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; font-size: .82rem; }
-    .trace-result strong { font-size: .9rem; }
-    .trace-result .bad { color: var(--fail); }
-    .trace-result .good { color: var(--pass); }
-    @media (max-width: 560px) { .trace-grid { grid-template-columns: 1fr; } }
+    .trace-note { color: var(--muted); font-size: .84rem; margin: 0 0 20px; max-width: 60ch; }
+    .trace-note b { color: var(--ink); font-weight: 650; }
+
+    .rt { --rt-line: #cdd4de; display: flex; flex-direction: column; align-items: center; }
+    .rt-trunk { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: stretch; }
+    .rt-step { text-align: center; border: 1px solid var(--border-strong); background: var(--code-bg); border-radius: 9px; padding: 9px 12px; font-size: .82rem; font-weight: 600; color: var(--ink); }
+    .rt-step small { display: block; margin-top: 2px; font-size: .72rem; font-weight: 400; color: var(--muted); }
+    .rt-drop { align-self: center; width: 2px; height: 16px; background: var(--rt-line); }
+    .rt-drop.bad { background: var(--fail); }
+    .rt-drop.good { background: var(--pass); }
+
+    /* the pivot — the single detail that proves both lanes share one draft */
+    .rt-draft { text-align: center; border: 1.5px solid var(--fail); background: var(--fail-bg); border-radius: 10px; padding: 11px 14px; color: var(--fail); font-weight: 700; font-size: .86rem; box-shadow: 0 0 0 4px rgba(194,42,42,.06); }
+    .rt-draft small { display: block; margin-top: 2px; font-size: .72rem; font-weight: 500; color: #9a3b3b; }
+
+    /* fork connector: stem down, bar across lane centres, two drops */
+    .rt-fork { position: relative; width: 100%; height: 26px; }
+    .rt-fork span { position: absolute; background: var(--rt-line); }
+    .rt-fork .f-stem { left: 50%; top: 0; width: 2px; height: 13px; transform: translateX(-1px); }
+    .rt-fork .f-bar  { left: 25%; right: 25%; top: 12px; height: 2px; }
+    .rt-fork .f-dl   { left: 25%; top: 12px; width: 2px; height: 14px; }
+    .rt-fork .f-dr   { left: 75%; top: 12px; width: 2px; height: 14px; }
+
+    .rt-lanes { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .rt-lane { display: flex; flex-direction: column; align-items: stretch; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--panel); }
+    .rt-lane.bad  { border-top: 3px solid var(--fail); }
+    .rt-lane.good { border-top: 3px solid var(--pass); }
+    .rt-lane-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .rt-lane-head strong { font-size: .86rem; }
+    .rt-lane-head .ours { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); background: #e9effe; border-radius: 4px; padding: 1px 5px; margin-left: 5px; vertical-align: middle; }
+    .rt-port { font: 700 .72rem ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--faint); }
+
+    .rt-gate { text-align: center; border: 1.5px solid var(--accent); background: #f3f6fe; border-radius: 9px; padding: 10px 12px; }
+    .rt-gate-title { font-size: .76rem; font-weight: 700; color: var(--accent); }
+    .rt-gate-title code { font: 600 .72rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .rt-clauses { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-top: 7px; }
+    .rt-clauses span { font: 600 .66rem ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); border: 1px solid #bcccf7; border-radius: 4px; padding: 2px 6px; }
+    .rt-gate-sub { margin-top: 7px; font-size: .7rem; color: var(--muted); }
+
+    .rt-outcome { text-align: center; border-radius: 9px; padding: 11px 12px; font-weight: 650; font-size: .84rem; }
+    .rt-outcome small { display: block; margin-top: 2px; font-size: .71rem; font-weight: 400; }
+    .rt-outcome.bad  { background: var(--fail-bg); color: var(--fail); }
+    .rt-outcome.good { background: var(--pass-bg); color: var(--pass); }
+    .rt-outcome.bad small  { color: #9a3b3b; }
+    .rt-outcome.good small { color: #2f7a4d; }
+    .rt-verdict { display: inline-block; margin-top: 8px; font-size: .72rem; font-weight: 800; letter-spacing: .02em; border-radius: 5px; padding: 3px 9px; }
+    .rt-verdict.bad  { background: var(--fail); color: #fff; }
+    .rt-verdict.good { background: var(--pass); color: #fff; }
+
+    @media (max-width: 560px) {
+      .rt-fork { display: none; }
+      .rt-trunk { max-width: 100%; }
+      .rt-lanes { grid-template-columns: 1fr; gap: 14px; }
+      .rt-lane { margin-top: 14px; position: relative; }
+      .rt-lane::before { content: ""; position: absolute; top: -14px; left: 50%; width: 2px; height: 14px; background: var(--rt-line); }
+    }
 
     .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); margin-bottom: 20px; }
 
@@ -1961,32 +1996,39 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     <p class="lede">Point the autonomous red-teamer at an external AI agent's chat endpoint and run a black-box regulatory assessment. No code changes or SDK needed on the target.</p>
 
     <section class="trace-card" aria-labelledby="traceTitle">
-      <h2 id="traceTitle">Request trace: where the guardrail acts</h2>
-      <p class="trace-note">HTTP request handling is shared. Service mode is fixed at startup; in-band mode sends the draft through a persistent MCP stdio session before returning a response.</p>
-      <div class="trace-grid">
-        <article class="trace-path vuln" aria-label="Port 9000, not protected, 25 percent compliance, critical risk">
-          <div class="trace-head"><strong>Not protected (vulnerable)</strong><span class="trace-port">:9000 · AGENT_MODE=vulnerable</span></div>
-          <div class="trace-flow" aria-label="POST request, authentication and validation, vulnerable agent, response JSON">
-            <div class="trace-node">HTTP request<small>POST /v1/chat<br>{"message": …}</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node">Service checks<small>optional Bearer auth<br>ChatRequest · prompt limit</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node">Vulnerable brain<small>brain.reply(prompt)<br>MockWildBankingAgent.process</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node exposed">Unsafe reply<small>HTTP 200 · {"response": …}</small></div>
-          </div>
-          <div class="trace-result"><span>Compliance score</span><strong class="bad">25% · CRITICAL</strong></div>
-        </article>
-        <article class="trace-path guarded" aria-label="Port 9001, in-band guardrail, 100 percent compliance, low risk">
-          <div class="trace-head"><strong>In-band guardrail (our capability)</strong><span class="trace-port">:9001 · AGENT_MODE=in_band</span></div>
-          <div class="trace-flow" aria-label="POST request, service validation, draft generation, APRA audit, block or continue, response JSON">
-            <div class="trace-node">HTTP request<small>POST /v1/chat<br>{"message": …}</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node">Service checks<small>optional Bearer auth<br>ChatRequest · prompt limit</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node">Agent draft<small>vulnerable brain<br>candidate reply</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node guard">MCP client<small>persistent stdio session<br>tools/call</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node guard">APRA MCP server<small>audit_agent_for_regulatory_breach<br>role + prompt + draft</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node guard">Verdict branch<small>FAILED → withhold draft<br>otherwise → return draft</small></div><span class="trace-arrow" aria-hidden="true">→</span>
-            <div class="trace-node guard">HTTP response<small>200 + audited result<br>503 if MCP audit fails</small></div>
-          </div>
-          <div class="trace-result"><span>Compliance score</span><strong class="good">100% · LOW ✓</strong></div>
-        </article>
+      <h2 id="traceTitle">Request trace: one agent, one control</h2>
+      <p class="trace-note">Both deployments run the <b>same vulnerable agent</b> and produce the <b>same unsafe draft</b>. The only difference is whether our in-band APRA-MCP guardrail sits in the path before the reply is dispatched.</p>
+      <div class="rt">
+        <div class="rt-trunk" aria-label="Shared path: HTTP request, service checks, vulnerable agent, same unsafe draft">
+          <div class="rt-step">HTTP request <small>POST /v1/chat · {"message": …}</small></div>
+          <div class="rt-drop" aria-hidden="true"></div>
+          <div class="rt-step">Service checks <small>optional Bearer auth · schema · prompt limit</small></div>
+          <div class="rt-drop" aria-hidden="true"></div>
+          <div class="rt-step">Vulnerable agent <small>MockWildBankingAgent.process</small></div>
+          <div class="rt-drop bad" aria-hidden="true"></div>
+          <div class="rt-draft">⚠ Same unsafe draft <small>approves a coerced $250k loan with no human sign-off</small></div>
+        </div>
+
+        <div class="rt-fork" aria-hidden="true"><span class="f-stem"></span><span class="f-bar"></span><span class="f-dl"></span><span class="f-dr"></span></div>
+
+        <div class="rt-lanes">
+          <article class="rt-lane bad" aria-label="No guardrail, port 9000: draft ships to caller, breach, 25 percent critical">
+            <div class="rt-lane-head"><strong>No guardrail</strong><span class="rt-port">:9000</span></div>
+            <div class="rt-drop bad" aria-hidden="true"></div>
+            <div class="rt-outcome bad">Ships to caller<small>draft returned verbatim · HTTP 200</small><span class="rt-verdict bad">BREACH · 25% CRITICAL</span></div>
+          </article>
+          <article class="rt-lane good" aria-label="In-band APRA-MCP guardrail, port 9001: draft intercepted and withheld, blocked, 100 percent low">
+            <div class="rt-lane-head"><strong>In-band APRA-MCP<span class="ours">our capability</span></strong><span class="rt-port">:9001</span></div>
+            <div class="rt-drop good" aria-hidden="true"></div>
+            <div class="rt-gate">
+              <div class="rt-gate-title">◆ Policy gate · <code>audit_agent_for_regulatory_breach</code></div>
+              <div class="rt-clauses"><span>CPS 230 Para 29</span><span>CPS 234 Para 21</span></div>
+              <div class="rt-gate-sub">draft intercepted before dispatch</div>
+            </div>
+            <div class="rt-drop good" aria-hidden="true"></div>
+            <div class="rt-outcome good">Draft withheld<small>escalated to a licensed officer · HTTP 503</small><span class="rt-verdict good">BLOCKED · 100% LOW ✓</span></div>
+          </article>
+        </div>
       </div>
     </section>
 
