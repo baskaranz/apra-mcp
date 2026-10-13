@@ -1728,8 +1728,329 @@ HTML_CONTENT = """<!DOCTYPE html>
 """
 
 
+SIMPLE_PROBE_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black-Box Agent Probe</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #d9dde3;
+      --ink: #1b2330;
+      --muted: #67707e;
+      --accent: #2563eb;
+      --accent-ink: #ffffff;
+      --low: #15803d;
+      --high: #b45309;
+      --critical: #b91c1c;
+      --code-bg: #f1f3f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
+    header h1 { font-size: 1.5rem; margin: 0 0 4px; }
+    header p { margin: 0 0 24px; color: var(--muted); font-size: 0.95rem; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    label { display: block; font-size: 0.82rem; font-weight: 600; margin: 0 0 6px; color: var(--ink); }
+    .hint { font-weight: 400; color: var(--muted); }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+    .row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .row > .field { flex: 1 1 180px; }
+    .field { margin-bottom: 16px; }
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 16px; }
+    .chip {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--ink);
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    button.run {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.run:hover { background: #1d4fd8; }
+    button.run:disabled { opacity: 0.55; cursor: not-allowed; }
+    .status { margin-top: 14px; font-size: 0.9rem; color: var(--muted); min-height: 1.2em; }
+    .error { color: var(--critical); font-weight: 600; }
+    #results { display: none; }
+    .summary { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+    .stat { flex: 1 1 120px; border: 1px solid var(--border); border-radius: 9px; padding: 14px; background: #fff; }
+    .stat .k { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .stat .v { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; color: #fff; }
+    .badge.LOW { background: var(--low); }
+    .badge.HIGH { background: var(--high); }
+    .badge.CRITICAL { background: var(--critical); }
+    .rung { border: 1px solid var(--border); border-radius: 9px; padding: 16px; margin-bottom: 14px; background: #fff; }
+    .rung.fail { border-left: 4px solid var(--critical); }
+    .rung.pass { border-left: 4px solid var(--low); }
+    .rung h3 { margin: 0 0 4px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .verdict { font-size: 0.78rem; font-weight: 700; padding: 2px 9px; border-radius: 6px; white-space: nowrap; }
+    .verdict.PASSED { background: #dcfce7; color: var(--low); }
+    .verdict.FAILED { background: #fee2e2; color: var(--critical); }
+    .rung .obj { color: var(--muted); font-size: 0.88rem; margin: 0 0 10px; }
+    .io { margin: 8px 0; }
+    .io .tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin: 4px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.82rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .violation { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-size: 0.84rem; }
+    .violation .clause { font-weight: 700; color: var(--critical); }
+    .notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-size: 0.84rem; color: var(--high); font-weight: 600; }
+    .meta { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 20px; }
+    .actions button {
+      padding: 9px 16px; border: 1px solid var(--border); background: #fff; border-radius: 7px;
+      font-size: 0.86rem; cursor: pointer; color: var(--ink);
+    }
+    .actions button:hover { border-color: var(--accent); color: var(--accent); }
+    code.fp { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; word-break: break-all; }
+    footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 24px; }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🌐 Black-Box Agent Probe</h1>
+      <p>Point the autonomous red-teamer at an external AI agent and run an APRA CPS 230 / CPS 234 assessment. No code changes or MCP SDK needed on the target.</p>
+    </header>
+
+    <div class="panel">
+      <div class="field">
+        <label for="target">Target agent endpoint <span class="hint">— HTTP(S) URL, or a built-in mock</span></label>
+        <input id="target" type="text" value="mock://banking-lending-agent" placeholder="https://api.yourbank.com/v1/chat" autocomplete="off" />
+        <div class="presets">
+          <span class="chip" data-url="mock://banking-lending-agent" data-industry="banking" data-role="lending_agent">🏦 Wild banking bot</span>
+          <span class="chip" data-url="mock://hardened-bank-agent" data-industry="banking" data-role="lending_agent">🛡️ Hardened bank bot</span>
+          <span class="chip" data-url="mock://insurance-wild-agent" data-industry="insurance" data-role="claims_processing_agent">🏥 Wild insurance bot</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="industry">Industry</label>
+          <select id="industry">
+            <option value="banking">Banking (ADIs)</option>
+            <option value="insurance">Insurance</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="role">Agent role</label>
+          <input id="role" type="text" value="lending_agent" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="turns">Test ladder depth</label>
+          <select id="turns">
+            <option value="1">1 rung — Baseline</option>
+            <option value="2">2 rungs — + False authority</option>
+            <option value="3">3 rungs — + Data boundary</option>
+            <option value="4" selected>4 rungs — Full ladder</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="auth">Authorization token <span class="hint">— optional, sent as Bearer header</span></label>
+        <input id="auth" type="text" placeholder="sk-live-..." autocomplete="off" />
+      </div>
+
+      <button class="run" id="runBtn">⚡ Run assessment</button>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div id="results">
+      <div class="actions">
+        <button id="copyBtn">📋 Copy dossier (.md)</button>
+        <button id="dlBtn">📥 Download dossier (.md)</button>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div id="rungs"></div>
+      <div class="panel" id="evidence"></div>
+    </div>
+
+    <footer>
+      APRA MCP · automated control-testing observations for human review (CPS 230 Para 19 / CPS 234 Para 13) — not a formal regulatory filing.
+      · <a href="/">Full studio</a>
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let lastDossier = "";
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        $("target").value = chip.dataset.url;
+        $("industry").value = chip.dataset.industry;
+        $("role").value = chip.dataset.role;
+      });
+    });
+
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    async function runAssessment() {
+      const btn = $("runBtn");
+      const status = $("status");
+      const target = $("target").value.trim();
+      if (!target) { status.className = "status error"; status.textContent = "Enter a target endpoint."; return; }
+
+      btn.disabled = true;
+      status.className = "status";
+      status.textContent = "Running autonomous red-team campaign against " + target + " …";
+      $("results").style.display = "none";
+
+      const payload = {
+        target_url: target,
+        industry: $("industry").value,
+        agent_role: $("role").value.trim() || "lending_agent",
+        turns: parseInt($("turns").value, 10),
+        auth_token: $("auth").value.trim() || null,
+      };
+
+      try {
+        const res = await fetch("/api/autonomous_red_team", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error || ("Request failed (" + res.status + ")"));
+        }
+        render(data);
+        status.className = "status";
+        status.textContent = "Completed in " + (data.duration_seconds ?? "?") + "s.";
+      } catch (e) {
+        status.className = "status error";
+        status.textContent = "Error: " + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function render(data) {
+      const s = data.campaign_summary || {};
+      lastDossier = data.board_dossier_markdown || "";
+      const risk = s.board_risk_rating || "—";
+
+      $("summary").innerHTML =
+        stat("Compliance score", (s.compliance_score_percentage ?? "—") + "%") +
+        statBadge("Board risk", risk) +
+        stat("Rungs passed", (s.passed_turns ?? "—") + " / " + (s.total_turns_executed ?? "—")) +
+        stat("Statutory breaches", s.total_statutory_violations ?? "—") +
+        stat("APRA notices", s.mandatory_apra_notifications ?? "—");
+
+      const turns = data.detailed_turns || [];
+      $("rungs").innerHTML = turns.map((t) => {
+        const passed = t.audit_verdict === "PASSED";
+        const violations = (t.violations || []).map((v) =>
+          '<div class="violation"><span class="clause">[' + esc(v.standard) + ' ' + esc(v.clause) + ']</span> ' +
+          esc(v.finding) + '<div class="meta">Remediation: ' + esc(v.statutory_remediation) + '</div></div>'
+        ).join("");
+        const notice = t.apra_notification_triggered
+          ? '<div class="notice">⚠️ Mandatory APRA statutory notification triggered</div>' : "";
+        return '<div class="rung ' + (passed ? "pass" : "fail") + '">' +
+          '<h3>' + esc(t.rung_name) + '<span class="verdict ' + esc(t.audit_verdict) + '">' +
+          (passed ? "PASS" : "FAIL") + '</span></h3>' +
+          '<p class="obj">' + esc(t.objective) + '</p>' +
+          '<div class="io"><span class="tag">Probe</span><pre>' + esc(t.adversarial_prompt) + '</pre></div>' +
+          '<div class="io"><span class="tag">Target response</span><pre>' + esc(t.target_response) + '</pre></div>' +
+          notice + violations +
+          '<div class="meta">Latency ' + esc(t.latency_ms) + ' ms · tools: ' +
+          esc((t.mcp_tools_consulted || []).join(", ")) + '</div>' +
+        '</div>';
+      }).join("");
+
+      const verified = s.evidence_chain_verified;
+      $("evidence").innerHTML =
+        '<label>Tamper-evident evidence manifest</label>' +
+        '<div class="meta">Chain integrity: <strong>' +
+        (verified ? "VERIFIED 🔒" : "TAMPERED / INVALID ⚠️") + '</strong></div>' +
+        '<div class="meta">Root fingerprint (SHA-256):<br><code class="fp">' +
+        esc(s.evidence_manifest_fingerprint || "—") + '</code></div>';
+
+      $("results").style.display = "block";
+    }
+
+    function stat(k, v) { return '<div class="stat"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+    function statBadge(k, risk) {
+      return '<div class="stat"><div class="k">' + esc(k) + '</div><div class="v"><span class="badge ' +
+        esc(risk) + '">' + esc(risk) + '</span></div></div>';
+    }
+
+    $("runBtn").addEventListener("click", runAssessment);
+    $("copyBtn").addEventListener("click", () => {
+      if (lastDossier) navigator.clipboard.writeText(lastDossier);
+    });
+    $("dlBtn").addEventListener("click", () => {
+      if (!lastDossier) return;
+      const blob = new Blob([lastDossier], { type: "text/markdown" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "apra_board_dossier.md";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  </script>
+</body>
+</html>
+"""
+
+
 async def homepage(request):
     return HTMLResponse(HTML_CONTENT)
+
+
+async def simple_probe(request):
+    return HTMLResponse(SIMPLE_PROBE_HTML)
 
 
 async def api_chat(request):
@@ -1877,6 +2198,7 @@ async def api_autonomous_red_team(request):
 
 routes = [
     Route("/", homepage),
+    Route("/probe", simple_probe),
     Route("/api/chat", api_chat, methods=["POST"]),
     Route("/api/spin_test", api_spin_test, methods=["POST"]),
     Route("/api/autonomous_red_team", api_autonomous_red_team, methods=["POST"]),

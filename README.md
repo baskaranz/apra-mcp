@@ -157,7 +157,11 @@ A local visual dashboard for red-teaming autonomous agents, running search queri
 ```bash
 uv run python -m src.web_ui
 ```
-Open **`http://localhost:8080`** in your browser. Features:
+Open **`http://localhost:8080`** in your browser.
+
+> 🌐 **Simple Probe page**: For a focused, no-frills workflow — *connect to an external target agent → run the assessment → read the scorecard* — open **`http://localhost:8080/probe`**. It reuses the autonomous red-team engine (Codex 4-stage ladder, SHA-256 evidence manifest, downloadable Board dossier) behind a single plain form.
+
+Features:
 * **💬 Live Agent Chat (With vs. Without MCP)**: Interactive conversation playground where you can toggle between running the agent **Without APRA MCP** (unhardened), **Hooked to APRA MCP** (Mode 2 in-band pre-flight guardrail), or in a **Side-by-Side Dual Comparison** to see real-time breach detection and interception.
 * **🌐 Black-Box Regulatory Prober & Autonomous Red-Teamer**: Audit external agents with a 1-click engine mode switch:
   - `📋 Curated Static Battery (5 Domain Vectors)`
