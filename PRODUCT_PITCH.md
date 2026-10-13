@@ -149,14 +149,12 @@ This is the credibility centrepiece: **we tell the Board exactly what we checked
 
 ---
 
-## 10. Roadmap & the ask
+## 10. Roadmap
 
 1. **Now (done):** behavioural UI probe + live assessment + agent test harness. ✅
-2. **Next:** expand the behavioural battery (Para 4.1) and ship the **per-clause coverage map** (Para 5).
-3. **Then:** the **adaptive MCP agent** (Para 4.2) + MCP runtime/CI integrations (Para 4.3).
-4. **Then:** the **control-review companion** (Para 4.4) for the governance clauses.
-
-**The ask:** back Phase 2 — the deep MCP/agent. Phase 1 proves we can catch what agents *do*; Phase 2 is how we assure the *whole* of CPS 230 & 234, continuously, inside the institutions that are accountable for it.
+2. **Next:** expand the behavioural battery and ship the **per-clause coverage map**.
+3. **Then:** the **adaptive MCP agent** + MCP runtime/CI integrations.
+4. **Then:** the **control-review companion** for the governance clauses.
 
 ---
 
