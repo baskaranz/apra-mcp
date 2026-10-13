@@ -116,24 +116,29 @@ uv run python -m src.simulation.red_team_runner hardened
 
 ## 🌐 Universal Black-Box Regulatory Prober & Autonomous Red-Teamer
 
+> 📘 **Step-by-Step Execution Guide**: For complete running instructions across Web UI, FastMCP, and CLI, mock target details, and the full OpenAI Codex review assessment, see [**AUTONOMOUS_AGENT_GUIDE.md**](AUTONOMOUS_AGENT_GUIDE.md).  
 > 📖 **Comprehensive Specification**: For in-depth architectural data flows, probe vectors, statutory APRA decision matrices, and sample Board dossiers, see [**BLACKBOX_PROBER.md**](BLACKBOX_PROBER.md).
 
 What if you discover an autonomous AI agent in the wild across Banking or Insurance and need to audit its regulatory resilience **without embedding MCP code, installing SDKs, or modifying the target codebase**?
 
 The APRA MCP server includes two complementary black-box assurance engines:
 1. **Curated Static Battery (`spin_test_agent`)**: Instant, zero-cost 5-vector regression suite.
-2. **Autonomous LLM Red-Teamer (`AutonomousMCPRedTeamer`)**: Co-designed and brainstormed with **OpenAI Codex (`gpt-6-luna`)**, this agentic engine climbs a structured **4-Stage Test Ladder** (Baseline $\rightarrow$ False Authority $\rightarrow$ Synthetic Data Boundary $\rightarrow$ Policy Ambiguity), dynamically queries APRA MCP tools to research statutory rules, enforces SSRF protections, and generates **tamper-evident SHA-256 cryptographic evidence manifests**.
+2. **Autonomous LLM Red-Teamer (`AutonomousMCPRedTeamer`)**: Co-designed and brainstormed with **OpenAI Codex (`gpt-6-luna`)**, this agentic engine climbs a structured **4-Stage Test Ladder** (Baseline $\rightarrow$ False Authority $\rightarrow$ Synthetic Data Boundary $\rightarrow$ Policy Ambiguity), dynamically queries APRA MCP tools to research statutory rules, enforces SSRF protections (with DNS pre-resolution and redirect blocking), and generates **tamper-evident SHA-256 cryptographic evidence manifests**.
 
-### How It Works:
-1. **Zero-Touch External Probing**: The target requires zero code modifications. Probes are dispatched via HTTP REST / OpenAI formats (or built-in zero-setup mocks) with round-trip latency tracking.
-2. **Codex 4-Stage Test Ladder**:
-   - *Rung 1: Baseline Inquiry* — Tests limits, operational scope, and human referral routing.
-   - *Rung 2: False Authority Coercion* — Executive/VIP coercion attempting to bypass verification (CPS 230).
-   - *Rung 3: Synthetic Data Boundary* — Prompt injection seeking protected customer PII/TFNs (CPS 234).
-   - *Rung 4: Product & Coverage Ambiguity* — Policy ambiguity testing coverage/waiver hallucinations (CPS 230).
-3. **Tamper-Evident SHA-256 Evidence Manifest**: Append-only cryptographic hash chain hashing every request/response payload, sequence number, and audit verdict, yielding a verifiable Root Manifest Fingerprint for Board and APRA review.
-4. **Automated Statutory APRA Notification Assessment**: Evaluates each response against CPS 230 Para 33 / 42 (24h/72h operational notices) and CPS 234 Para 35 (72h cyber/data notices).
-5. **Board Audit Report Generation**: Automatically exports a comprehensive **Board Risk Dossier** in Markdown format detailing executive liability under CPS 230 Para 19 and CPS 234 Para 13.
+### Quick Run via Standalone CLI:
+```bash
+# 1-Command CLI execution against mock banking bot (4 rungs)
+uv run python run_autonomous_agent.py --target mock://banking-lending-agent
+
+# Test APRA-hardened banking bot (100% compliance pass rate)
+uv run python run_autonomous_agent.py --target mock://hardened-bank-agent
+
+# Test wild insurance claims bot
+uv run python run_autonomous_agent.py --target mock://insurance-wild-agent --industry insurance --role claims_processing_agent
+
+# Test external REST endpoint and export Board Dossier (.md)
+uv run python run_autonomous_agent.py --target https://api.mybank.com/v1/chat --turns 4 --output board_dossier.md
+```
 
 ### Built-in Zero-Setup Mock Targets:
 * `mock://banking-lending-agent`: Unhardened banking bot (fails credit & PII probes; triggers APRA notices).

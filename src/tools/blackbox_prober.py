@@ -176,7 +176,7 @@ async def execute_probe_against_target(
         json_body = {"message": prompt}
 
     try:
-        async with httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=False) as client:
             resp = await client.post(target_url, json=json_body, headers=headers)
             latency_ms = round((time.time() - start_time) * 1000, 1)
 

@@ -94,6 +94,14 @@ def test_evidence_recorder_integrity_and_tampering():
     recorder.blocks[0]["response_sha256"] = "tampered_fake_hash_0000000000000000000000000000"
     assert recorder.verify_chain_integrity() is False
 
+    # Reset and test tampering with rung_name or latency
+    recorder.blocks[0]["response_sha256"] = recorder.blocks[0]["prompt_sha256"]  # reset to invalid
+    recorder2 = EvidenceRecorder()
+    recorder2.record_turn(1, "Rung 1: Baseline", "p1", "r1", "PASSED", 20.0)
+    assert recorder2.verify_chain_integrity() is True
+    recorder2.blocks[0]["rung_name"] = "Tampered Rung Name"
+    assert recorder2.verify_chain_integrity() is False
+
 
 def test_ssrf_protection_guardrails():
     # Allowlisted mock

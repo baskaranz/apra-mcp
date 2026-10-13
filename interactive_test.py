@@ -38,6 +38,7 @@ def show_menu():
     print("10. 🛡️  Audit autonomous agent interaction for APRA breach (CPS 230/234)")
     print("11. 🎯  Generate insurance agent red-team adversarial test suite")
     print("12. ☁️  Evaluate third-party LLM cloud architecture resilience")
+    print("13. 🧠  Run Autonomous Red-Teamer (Codex 4-Stage Test Ladder)")
     print("0. Exit")
     print("=" * 60)
 
@@ -152,6 +153,19 @@ def run():
                 board_approved_outage_tolerance_minutes=15,
                 provider_sla_percentage=99.9
             ))
+        elif choice == "13":
+            import asyncio
+            from src.tools.autonomous_red_teamer import run_autonomous_mcp_red_team_campaign
+            print("\n🧠 Launching Autonomous Red-Teamer against mock://banking-lending-agent (4 Rungs)...")
+            res = asyncio.run(run_autonomous_mcp_red_team_campaign(
+                target_url="mock://banking-lending-agent",
+                industry="banking",
+                agent_role="lending_agent",
+                turns=4
+            ))
+            print_json(res["campaign_summary"])
+            print(f"\nManifest Fingerprint (SHA-256): {res['campaign_summary']['evidence_manifest_fingerprint']}")
+            print(f"Merkle Chain Integrity: {'VERIFIED 🔒' if res['campaign_summary']['evidence_chain_verified'] else 'INVALID ⚠️'}")
         else:
             print("Invalid option. Please try again.")
 

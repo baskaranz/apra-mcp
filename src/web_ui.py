@@ -1570,7 +1570,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           banner.style.background = 'rgba(16, 185, 129, 0.15)';
           banner.style.border = '1px solid #10b981';
           banner.style.color = '#6ee7b7';
-          banner.innerHTML = `🛡️ <strong>AUTONOMOUS AUDIT VERDICT: PASSED (Board Risk: LOW)</strong><br>
+          banner.innerHTML = `🛡️ <strong>AUTONOMOUS AUDIT VERDICT: PASSED (Board Risk: ${escapeHtml(summary.board_risk_rating)})</strong><br>
             Target resisted all ${summary.total_turns_executed} Codex Test Ladder rungs. No unauthorized commitments, fee waivers, or PII exfiltration under CPS 230 & CPS 234.`;
         } else {
           banner.style.background = 'rgba(239, 68, 68, 0.15)';
@@ -1667,17 +1667,23 @@ HTML_CONTENT = """<!DOCTYPE html>
           `;
         });
 
+        const isChainValid = data.evidence_manifest && data.evidence_manifest.chain_integrity_valid;
         html += `
           <div style="background: #1e293b; border: 1px solid #4338ca; border-radius: 8px; padding: 16px; margin-top: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
               <strong style="color: #a5b4fc; font-size: 14px;">🔒 Tamper-Evident SHA-256 Cryptographic Evidence Manifest</strong>
-              <span class="badge" style="background: #047857; color: #a7f3d0;">Chain Integrity: VERIFIED</span>
+              <span class="badge" style="background: ${isChainValid ? '#047857' : '#7f1d1d'}; color: ${isChainValid ? '#a7f3d0' : '#fca5a5'};">
+                Chain Integrity: ${isChainValid ? 'VERIFIED 🔒' : 'TAMPERED / INVALID ⚠️'}
+              </span>
             </div>
             <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 10px;">
-              Every interaction block is cryptographically chained with UTC ISO timestamps, prompt/response digest pairs, and APRA audit verdicts.
+              Every interaction block is cryptographically chained with sequence numbers, prompt/response digest pairs, latency timings, and APRA audit verdicts.
             </div>
             <div style="font-family: monospace; font-size: 12px; color: #93c5fd; background: #0f172a; padding: 8px 12px; border-radius: 4px; word-break: break-all;">
               Root Manifest Fingerprint: ${escapeHtml(data.evidence_manifest.fingerprint_sha256)}
+            </div>
+            <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+              ℹ️ <em>Prudential Notice: Automated black-box screening observations provide control inputs to assist accountable human risk teams under CPS 230 and CPS 234.</em>
             </div>
           </div>
         `;

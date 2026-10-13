@@ -22,6 +22,7 @@ import hashlib
 import re
 import urllib.parse
 import ipaddress
+import socket
 
 from src.tools.lookup import lookup_specific_clause
 from src.tools.search import execute_search
@@ -37,7 +38,8 @@ from src.tools.blackbox_prober import execute_probe_against_target
 def validate_target_url(target_url: str) -> None:
     """
     SSRF Protection: Validates target URL against SSRF vulnerabilities,
-    cloud metadata exfiltration (169.254.169.254), and private internal network traversal.
+    cloud metadata exfiltration (169.254.169.254), private internal network traversal,
+    and DNS resolution rebinding.
     """
     if not target_url or not isinstance(target_url, str):
         raise ValueError("Target URL must be a non-empty string.")
@@ -67,23 +69,45 @@ def validate_target_url(target_url: str) -> None:
     if "169.254" in hostname or "100.100.100.200" in hostname:
         raise ValueError(f"SSRF Protection: Cloud metadata IP '{hostname}' is strictly prohibited.")
 
-    # Check if hostname is an IP address
+    # 1. Check if hostname is an IP address literal
     try:
         ip = ipaddress.ip_address(hostname)
         if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_multicast or ip.is_reserved:
             raise ValueError(
                 f"SSRF Protection: Probing private or link-local IP '{hostname}' is strictly prohibited."
             )
+        if str(ip) in ("169.254.169.254", "100.100.100.200"):
+            raise ValueError(f"SSRF Protection: Cloud metadata IP '{hostname}' is strictly prohibited.")
     except ValueError as e:
         if "SSRF Protection" in str(e):
             raise
-        # Hostname is a domain name, not a raw IP
+        # 2. Hostname is a domain name: Resolve via DNS to detect internal or link-local destinations
+        try:
+            addr_info = socket.getaddrinfo(hostname, None)
+            for _, _, _, _, sockaddr in addr_info:
+                resolved_ip_str = sockaddr[0]
+                resolved_ip = ipaddress.ip_address(resolved_ip_str)
+                if (
+                    resolved_ip.is_loopback
+                    or resolved_ip.is_private
+                    or resolved_ip.is_link_local
+                    or resolved_ip.is_multicast
+                    or resolved_ip.is_reserved
+                    or resolved_ip_str in ("169.254.169.254", "100.100.100.200")
+                ):
+                    raise ValueError(
+                        f"SSRF Protection: Hostname '{hostname}' resolves to restricted internal IP '{resolved_ip_str}'."
+                    )
+        except socket.gaierror:
+            # Domain does not resolve; httpx will fail naturally on connect
+            pass
 
 
 class EvidenceRecorder:
     """
     Append-only tamper-evident cryptographic evidence manifest.
-    Computes an SHA-256 hash chain over all probe requests, responses, and audit verdicts.
+    Computes an SHA-256 hash chain over all probe requests, responses, verdicts,
+    ladder rungs, latency timings, and timestamps.
     """
 
     GENESIS_HASH = "GENESIS-0000000000000000000000000000000000000000000000000000000000000000"
@@ -107,7 +131,8 @@ class EvidenceRecorder:
         prompt_sha = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         response_sha = hashlib.sha256(response.encode("utf-8")).hexdigest()
 
-        block_payload = f"{turn_number}:{prev_hash}:{prompt_sha}:{response_sha}:{audit_verdict}:{ts}"
+        # Commit all turn metadata (sequence, prev_hash, prompt, response, verdict, rung_name, latency, ts)
+        block_payload = f"{turn_number}:{prev_hash}:{prompt_sha}:{response_sha}:{audit_verdict}:{rung_name}:{latency_ms}:{ts}"
         block_hash = hashlib.sha256(block_payload.encode("utf-8")).hexdigest()
 
         block = {
@@ -139,7 +164,7 @@ class EvidenceRecorder:
                 return False
             payload = (
                 f"{b['sequence']}:{b['previous_block_hash']}:{b['prompt_sha256']}:"
-                f"{b['response_sha256']}:{b['audit_verdict']}:{b['timestamp_utc']}"
+                f"{b['response_sha256']}:{b['audit_verdict']}:{b['rung_name']}:{b['latency_ms']}:{b['timestamp_utc']}"
             )
             expected = hashlib.sha256(payload.encode("utf-8")).hexdigest()
             if b["block_hash"] != expected:
@@ -485,7 +510,8 @@ class AutonomousMCPRedTeamer:
             f"**Regulated Industry:** {self.industry.upper()} | **Agent Role:** `{self.agent_role}`  ",
             f"**Evidence Fingerprint (SHA-256):** `{manifest_fingerprint}` (`Verified: {chain_verified}`)\n",
             f"---",
-            f"## Executive Board Summary\n",
+            f"## Executive Board Summary (Automated Control Testing Results)\n",
+            f"> **Prudential Governance Advisory**: The findings in this dossier represent automated black-box control testing observations under simulated adversarial conditions. They identify potential operational risks and escalation triggers to assist accountable human risk teams and the Board under CPS 230 Para 19 and CPS 234 Para 13. Simulated findings do not constitute confirmed entity incidents or formal regulatory filings.\n",
             f"- **Overall Compliance Score:** **{compliance_score}%**",
             f"- **Board Risk Rating:** {status_emoji} **{board_risk}**",
             f"- **Total Statutory Breaches Detected:** **{total_breaches}**",
@@ -537,11 +563,10 @@ class AutonomousMCPRedTeamer:
             f"\n**Root Manifest Fingerprint:** `{manifest_fingerprint}`",
             f"\n---",
             f"## Statutory Accountability Advisory",
-            f"> Under **APRA CPS 230 Para 19**, the Board of directors is ultimately accountable for operational resilience. "
-            f"Deploying autonomous or LLM-driven agents into critical operations without independent adversarial controls "
-            f"exposes the entity to immediate supervisory intervention.",
+            f"> Under **APRA CPS 230 Para 19**, the Board is ultimately accountable for the operational resilience of the entity's critical operations. "
+            f"Senior management must ensure rigorous adversarial testing controls and human escalation boundaries govern automated AI workflows.",
             f"> Under **APRA CPS 234 Para 13 & 35**, entities must maintain information security controls commensurate with "
-            f"threat vulnerabilities and notify APRA within **72 hours** of material information security incidents."
+            f"threat vulnerabilities and maintain incident response procedures to evaluate material information security incidents for statutory 72-hour notification."
         ])
 
         return "\n".join(md)
