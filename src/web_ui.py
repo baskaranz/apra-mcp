@@ -1770,6 +1770,57 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
     .lede { margin: 0 0 28px; color: var(--muted); font-size: 1rem; max-width: 60ch; }
 
+    /* Assessment engine trace (live) */
+    .enginetrace .et-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .enginetrace h2 { font-size: 1.05rem; margin: 0; }
+    .et-stage { font: 700 .72rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .03em; color: var(--accent); background: var(--accent-soft, rgba(37,99,235,.1)); padding: 3px 10px; border-radius: 999px; }
+    .et-note { color: var(--muted); font-size: .84rem; margin: 4px 0 18px; }
+    .et-flow { display: flex; flex-direction: column; gap: 0; }
+    .et-node { display: flex; gap: 14px; align-items: flex-start; padding: 13px 14px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface, #fff); transition: border-color .2s, background .2s, box-shadow .2s; }
+    .et-node .et-ico { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 .8rem ui-monospace, Menlo, monospace; background: #eef1f5; color: var(--muted); border: 1px solid var(--border); transition: all .2s; }
+    .et-node .et-b { min-width: 0; }
+    .et-t { font-weight: 650; font-size: .92rem; }
+    .et-ext { font-weight: 500; color: var(--muted); font-size: .82rem; }
+    .et-d { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+    .et-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .et-chip { font: 600 .68rem ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); background: #eef1f5; border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; transition: all .2s; }
+    .et-verdict { margin-top: 8px; font-size: .74rem; font-weight: 700; padding: 2px 9px; border-radius: 5px; display: inline-block; }
+    .et-verdict.PASSED { background: var(--pass-bg); color: var(--pass); }
+    .et-verdict.FAILED { background: var(--fail-bg); color: var(--fail); }
+    .et-verdict.ERROR { background: var(--warn-bg); color: var(--warn); }
+    .et-link { height: 20px; margin-left: 26px; padding-left: 14px; border-left: 2px solid var(--border); display: flex; align-items: center; }
+    .et-link span { font-size: .68rem; color: var(--faint); font-family: ui-monospace, Menlo, monospace; transform: translateX(-2px); }
+    .et-node.active { border-color: var(--accent); background: var(--accent-soft, rgba(37,99,235,.08)); box-shadow: 0 0 0 3px var(--accent-soft, rgba(37,99,235,.12)); }
+    .et-node.active .et-ico { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .et-node.active .et-chip { border-color: var(--accent); color: var(--accent); }
+    .et-node.done .et-ico { background: var(--pass-bg); color: var(--pass); border-color: #b6e3c3; }
+    @media (prefers-reduced-motion: reduce) { .et-node { transition: none; } }
+
+    /* Request trace comparison */
+    .trace-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .trace-card h2 { font-size: 1.05rem; margin: 0 0 4px; }
+    .trace-note { color: var(--muted); font-size: .84rem; margin: 0 0 16px; }
+    .trace-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .trace-path { border: 1px solid var(--border); border-radius: 11px; padding: 14px; min-width: 0; background: #fff; }
+    .trace-path.vuln { border-top: 4px solid var(--fail); }
+    .trace-path.guarded { border-top: 4px solid var(--pass); }
+    .trace-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+    .trace-head strong { font-size: .9rem; }
+    .trace-port { font: 700 .75rem ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+    .trace-flow { display: flex; align-items: stretch; gap: 6px; }
+    .trace-node { flex: 1; min-width: 0; display: grid; place-items: center; text-align: center; padding: 9px 6px; border: 1px solid var(--border); border-radius: 8px; background: #f7f8fa; font-size: .75rem; line-height: 1.3; }
+    .trace-node.guard { background: var(--pass-bg); border-color: #b6e3c3; color: var(--pass); font-weight: 650; }
+    .trace-node.exposed { background: var(--fail-bg); border-color: #f3c2c2; color: var(--fail); font-weight: 650; }
+    .trace-node small { display: block; margin-top: 4px; font: .68rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
+    .trace-node.guard small { color: var(--pass); }
+    .trace-node.exposed small { color: var(--fail); }
+    .trace-arrow { align-self: center; color: var(--faint); font-weight: 700; }
+    .trace-result { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; font-size: .82rem; }
+    .trace-result strong { font-size: .9rem; }
+    .trace-result .bad { color: var(--fail); }
+    .trace-result .good { color: var(--pass); }
+    @media (max-width: 560px) { .trace-grid { grid-template-columns: 1fr; } }
+
     .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); margin-bottom: 20px; }
 
     label { display: block; font-size: 0.8rem; font-weight: 600; margin: 0 0 7px; }
@@ -1909,6 +1960,36 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
     <h1>Agent Compliance Probe</h1>
     <p class="lede">Point the autonomous red-teamer at an external AI agent's chat endpoint and run a black-box regulatory assessment. No code changes or SDK needed on the target.</p>
 
+    <section class="trace-card" aria-labelledby="traceTitle">
+      <h2 id="traceTitle">Request trace: where the guardrail acts</h2>
+      <p class="trace-note">HTTP request handling is shared. Service mode is fixed at startup; in-band mode sends the draft through a persistent MCP stdio session before returning a response.</p>
+      <div class="trace-grid">
+        <article class="trace-path vuln" aria-label="Port 9000, not protected, 25 percent compliance, critical risk">
+          <div class="trace-head"><strong>Not protected (vulnerable)</strong><span class="trace-port">:9000 · AGENT_MODE=vulnerable</span></div>
+          <div class="trace-flow" aria-label="POST request, authentication and validation, vulnerable agent, response JSON">
+            <div class="trace-node">HTTP request<small>POST /v1/chat<br>{"message": …}</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node">Service checks<small>optional Bearer auth<br>ChatRequest · prompt limit</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node">Vulnerable brain<small>brain.reply(prompt)<br>MockWildBankingAgent.process</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node exposed">Unsafe reply<small>HTTP 200 · {"response": …}</small></div>
+          </div>
+          <div class="trace-result"><span>Compliance score</span><strong class="bad">25% · CRITICAL</strong></div>
+        </article>
+        <article class="trace-path guarded" aria-label="Port 9001, in-band guardrail, 100 percent compliance, low risk">
+          <div class="trace-head"><strong>In-band guardrail (our capability)</strong><span class="trace-port">:9001 · AGENT_MODE=in_band</span></div>
+          <div class="trace-flow" aria-label="POST request, service validation, draft generation, APRA audit, block or continue, response JSON">
+            <div class="trace-node">HTTP request<small>POST /v1/chat<br>{"message": …}</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node">Service checks<small>optional Bearer auth<br>ChatRequest · prompt limit</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node">Agent draft<small>vulnerable brain<br>candidate reply</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node guard">MCP client<small>persistent stdio session<br>tools/call</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node guard">APRA MCP server<small>audit_agent_for_regulatory_breach<br>role + prompt + draft</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node guard">Verdict branch<small>FAILED → withhold draft<br>otherwise → return draft</small></div><span class="trace-arrow" aria-hidden="true">→</span>
+            <div class="trace-node guard">HTTP response<small>200 + audited result<br>503 if MCP audit fails</small></div>
+          </div>
+          <div class="trace-result"><span>Compliance score</span><strong class="good">100% · LOW ✓</strong></div>
+        </article>
+      </div>
+    </section>
+
     <div class="card">
       <div class="field">
         <label for="target">Target agent endpoint <span class="sub">— the agent's HTTP(S) chat URL</span></label>
@@ -1953,6 +2034,50 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
       </div>
       <div class="msg" id="msg"></div>
     </div>
+
+    <section class="card enginetrace" id="engineTrace" aria-labelledby="etTitle">
+      <div class="et-head">
+        <h2 id="etTitle">Assessment engine</h2>
+        <span class="et-stage" id="etStage">Idle</span>
+      </div>
+      <p class="et-note">How the prober assesses each probe request. It lights up stage by stage as the audit runs, and shows the APRA MCP tools each step calls.</p>
+      <div class="et-flow">
+        <div class="et-node" id="etn1">
+          <div class="et-ico">1</div>
+          <div class="et-b">
+            <div class="et-t">Planner</div>
+            <div class="et-d">Formulates the probe from statutory thresholds</div>
+            <div class="et-chips" id="etTools1"><span class="et-chip">search_regulations</span><span class="et-chip">lookup_clause</span><span class="et-chip">get_critical_operations</span></div>
+          </div>
+        </div>
+        <div class="et-link"><span>formulated probe</span></div>
+        <div class="et-node" id="etn2">
+          <div class="et-ico">2</div>
+          <div class="et-b">
+            <div class="et-t">Actor <span class="et-ext">→ 🌐 target agent</span></div>
+            <div class="et-d">HTTP POST to the target (SSRF-guarded), high-resolution latency timing</div>
+          </div>
+        </div>
+        <div class="et-link"><span>raw response</span></div>
+        <div class="et-node" id="etn3">
+          <div class="et-ico">3</div>
+          <div class="et-b">
+            <div class="et-t">Evaluator</div>
+            <div class="et-d">Audits the response for CPS 230 / CPS 234 breaches</div>
+            <div class="et-chips"><span class="et-chip">audit_agent_for_regulatory_breach</span></div>
+            <div class="et-verdict" id="etVerdict" hidden></div>
+          </div>
+        </div>
+        <div class="et-link"><span>verdict</span></div>
+        <div class="et-node" id="etn4">
+          <div class="et-ico">4</div>
+          <div class="et-b">
+            <div class="et-t">Evidence</div>
+            <div class="et-d">Appends a tamper-evident SHA-256 block to the chain</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="card">
       <div class="stages-head">
@@ -2011,6 +2136,45 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
 
   <script>
     const $ = (id) => document.getElementById(id);
+
+    // --- live assessment-engine trace (Planner -> Actor -> Evaluator -> Evidence) ---
+    let etTimers = [];
+    function etClearTimers() { etTimers.forEach(clearTimeout); etTimers = []; }
+    function etSetActive(n) {
+      for (let i = 1; i <= 4; i++) {
+        const el = $("etn" + i); if (!el) continue;
+        el.classList.remove("active", "done");
+        if (i < n) el.classList.add("done"); else if (i === n) el.classList.add("active");
+      }
+    }
+    function etReset() {
+      etClearTimers();
+      for (let i = 1; i <= 4; i++) { const el = $("etn" + i); if (el) el.classList.remove("active", "done"); }
+      const v = $("etVerdict"); if (v) v.hidden = true;
+      const st = $("etStage"); if (st) st.textContent = "Armed";
+      const t1 = $("etTools1");
+      if (t1) t1.innerHTML = ["search_regulations", "lookup_clause", "get_critical_operations"].map(x => '<span class="et-chip">' + x + "</span>").join("");
+    }
+    function etPlay(t) {
+      etClearTimers();
+      const stageList = (typeof STAGES !== "undefined") ? STAGES : [];
+      const st = $("etStage"); if (st) st.textContent = "Stage " + t.turn_number + " · " + ((stageList[t.turn_number - 1] || {}).name || t.rung_name);
+      const tools = t.mcp_tools_consulted || [];
+      const t1 = $("etTools1");
+      if (t1 && tools.length) t1.innerHTML = tools.map(x => '<span class="et-chip">' + esc(x) + "</span>").join("");
+      const v = $("etVerdict");
+      if (v) {
+        v.className = "et-verdict " + esc(t.audit_verdict);
+        v.textContent = t.audit_verdict === "PASSED" ? "PASS ✓" : (t.audit_verdict === "ERROR" ? "UNREACHABLE" : "BREACH ✕");
+        v.hidden = false;
+      }
+      [1, 2, 3, 4].forEach((n, i) => etTimers.push(setTimeout(() => etSetActive(n), i * 380)));
+    }
+    function etDone() {
+      etClearTimers();
+      for (let i = 1; i <= 4; i++) { const el = $("etn" + i); if (el) { el.classList.remove("active"); el.classList.add("done"); } }
+      const st = $("etStage"); if (st) st.textContent = "Complete";
+    }
     let lastDossier = "";
     let controller = null;
 
@@ -2075,6 +2239,7 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
       for (let n = 1; n <= depth; n++) setStage(n, "pending", "Pending");
       Object.keys(turnData).forEach(k => delete turnData[k]);
       $("verdict").style.display = "none";
+      etReset();
       $("evidence").style.display = "none";
       $("findings").innerHTML = "";
 
@@ -2124,6 +2289,7 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
             if (ev.type === "turn") {
               const t = ev.turn;
               turnData[t.turn_number] = t;
+              etPlay(t);
               if (t.audit_verdict === "ERROR") {
                 setStage(t.turn_number, "error", "Unreachable");
               } else {
@@ -2145,6 +2311,7 @@ SIMPLE_PROBE_HTML = r"""<!DOCTYPE html>
                 }
               }
               renderResults(ev, target);
+              etDone();
               msg.textContent = "Audit complete in " + (ev.duration_seconds ?? "?") + "s.";
             } else if (ev.type === "error") {
               throw new Error(ev.error || "Assessment failed");
