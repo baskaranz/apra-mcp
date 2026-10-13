@@ -1509,6 +1509,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           ❌ Probe failed: ${escapeHtml(err.message)}
         </div>`;
       }
+    }
+
     async function runAutonomousRedTeam() {
       const targetUrl = document.getElementById('prober-url').value;
       const industry = document.getElementById('prober-industry').value;
